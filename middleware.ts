@@ -9,6 +9,7 @@ export function middleware(req: NextRequest) {
   // Or locally: 'hakunamatata.localhost:3000'
   const isVercel = hostname.includes('vercel.app');
   const isLocalhost = hostname.includes('localhost');
+  const isProsess = hostname.includes('prosess.in');
 
   // Skip api, _next, static files
   if (
@@ -21,10 +22,18 @@ export function middleware(req: NextRequest) {
 
   // Detect subdomain
   let subdomain = '';
-  if (isVercel) {
+  if (isProsess) {
+    // E.g. "hakunamatata.stores.prosess.in" -> parts: ['hakunamatata', 'stores', 'prosess', 'in']
+    const parts = hostname.split('.');
+    if (parts.length >= 4) {
+      subdomain = parts[0];
+    } else if (parts.length === 3 && parts[0] !== 'stores' && parts[0] !== 'www') {
+      subdomain = parts[0];
+    }
+  } else if (isVercel) {
     // If hostname is "slug.storecraft-ecru.vercel.app"
     const parts = hostname.split('.');
-    if (parts.length > 3) { // more parts than storecraft-ecru.vercel.app
+    if (parts.length > 3) {
       subdomain = parts[0];
     }
   } else if (isLocalhost) {
