@@ -37,6 +37,11 @@ export function CheckoutModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null)
+  const [idempotencyKey, setIdempotencyKey] = useState(() => 
+    typeof crypto !== 'undefined' && crypto.randomUUID 
+      ? crypto.randomUUID() 
+      : Math.random().toString(36).substring(7)
+  )
 
   if (!isOpen) return null
 
@@ -65,8 +70,6 @@ export function CheckoutModal({
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
-
-  const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7))
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -102,7 +105,7 @@ export function CheckoutModal({
       // Order created successfully!
       setConfirmedOrder(data.order)
       // Reset idempotency key for future checkouts
-      setIdempotencyKey(crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7))
+      setIdempotencyKey(typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(7))
       onOrderSuccess(data.order)
     } catch (err: any) {
       setErrorMessage(err.message || 'An error occurred during checkout.')

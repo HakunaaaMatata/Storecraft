@@ -305,7 +305,7 @@
           "category": "Lighting",
           "price": 148,
           "compareAtPrice": 180,
-          "inventory": 13,
+          "inventory": 12,
           "lowStockThreshold": 5,
           "description": "Engineered from sand-cast aluminum with a balanced counterweight pivot. Casts a soft 2700K warm diffused glow, optimized for deep reading and studio work.",
           "features": [
@@ -1123,6 +1123,44 @@
     }
   ],
   "orders": [
+    {
+      "id": "SC-49512",
+      "storeSlug": "forma",
+      "storeName": "Forma Living",
+      "createdAt": "2026-10-09T22:05:44.674Z",
+      "customer": {
+        "fullName": "tAESYRDTFGIH",
+        "email": "134WFQC@gmail.com",
+        "phone": "9164443080",
+        "address": "1Q3UWJ",
+        "city": "ASJDFKGMB",
+        "state": "Karnataka",
+        "postalCode": "123456",
+        "country": "United States"
+      },
+      "paymentMethod": "Instant Demo Card (Pre-approved)",
+      "items": [
+        {
+          "productId": "forma-p1",
+          "sku": "SKU-FL-101",
+          "title": "Forma Desk Lamp",
+          "image": "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1000&q=80",
+          "quantity": 1,
+          "unitPrice": 148,
+          "totalPrice": 148,
+          "selectedVariants": {
+            "size": "Standard",
+            "color": "Matte Charcoal",
+            "finish": "Matte Powdercoat"
+          }
+        }
+      ],
+      "subtotal": 148,
+      "tax": 11.84,
+      "shipping": 0,
+      "total": 159.84,
+      "status": "Placed"
+    },
     {
       "id": "SC-98877",
       "storeSlug": "forma",

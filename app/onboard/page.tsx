@@ -313,6 +313,10 @@ export default function OnboardPage() {
       if (!formData.address.trim() || formData.address.trim().length < 5) {
         errors.address = 'Please enter a valid business address.'
       }
+      
+      if (!formData.businessType) {
+        errors.businessType = 'Please select a business type.'
+      }
     }
 
     if (currentStep === 2) {
@@ -324,6 +328,12 @@ export default function OnboardPage() {
     if (currentStep === 3) {
       if (formData.productsOption === 'csv' && (!csvFile || csvFile.count === 0)) {
         errors.products = 'Please upload a CSV file or choose "Generate sample products".'
+      }
+    }
+    
+    if (currentStep === 4) {
+      if (!formData.themePreset || !THEME_PRESETS[formData.themePreset]) {
+        errors.themePreset = 'Please select a valid theme preset.'
       }
     }
 
