@@ -33,6 +33,8 @@ export const viewport: Viewport = {
   ],
 }
 
+import { AuthProvider } from '@/lib/use-auth'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,9 +43,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <AuthProvider>
+          {children}
+        </AuthProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
   )
 }
+

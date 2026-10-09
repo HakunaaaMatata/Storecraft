@@ -1,11 +1,13 @@
 import fs from 'fs'
 import path from 'path'
 import { INITIAL_STORES } from './seed-data'
-import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId } from './types'
+import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId, User, Session } from './types'
 
 interface DbSchema {
   stores: Store[]
   orders: Order[]
+  users: User[]
+  sessions: Session[]
 }
 
 const DATA_DIR = path.join(process.cwd(), 'data')
@@ -14,9 +16,16 @@ const DB_FILE = path.join(DATA_DIR, 'storecraft-db.json')
 // In-memory cache
 let memoryDb: DbSchema | null = null
 
-function ensureDbFile(): DbSchema {
-  if (memoryDb) return memoryDb
+const DEFAULT_DEMO_USER: User = {
+  id: 'user-demo-jamie-davis',
+  name: 'Jamie Davis',
+  email: 'demo@storecraft.com',
+  passwordHash: '4c99de07bfb04d6b05259fe8d3ca9f463f67d3210580b2a9a2afd4533bd3f0c10ae5d03d59a827a8736c25b2b96268c27a4295c1b766b119f61016afd603e1c9',
+  salt: 'demo-salt-storecraft-2026',
+  createdAt: '2026-01-01T00:00:00.000Z'
+}
 
+function ensureDbFile(): DbSchema {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true })
@@ -24,22 +33,47 @@ function ensureDbFile(): DbSchema {
 
     if (fs.existsSync(DB_FILE)) {
       const content = fs.readFileSync(DB_FILE, 'utf-8')
-      memoryDb = JSON.parse(content)
-      return memoryDb!
+      const parsed = JSON.parse(content)
+      if (parsed) {
+        if (!parsed.users) parsed.users = []
+        if (!parsed.sessions) parsed.sessions = []
+        if (!parsed.stores) parsed.stores = JSON.parse(JSON.stringify(INITIAL_STORES))
+        for (const s of parsed.stores) {
+          if (!s.ownerId) {
+            s.ownerId = 'user-demo-jamie-davis'
+            s.ownerName = s.ownerName || 'Jamie Davis'
+            s.ownerEmail = s.ownerEmail || 'demo@storecraft.com'
+          }
+        }
+        if (!parsed.orders) parsed.orders = []
+        if (!parsed.users.some((u: User) => u.email === 'demo@storecraft.com')) {
+          parsed.users.push(DEFAULT_DEMO_USER)
+        }
+        persistDb(parsed)
+        memoryDb = parsed
+        return parsed
+      }
     }
   } catch (err) {
-    console.warn('[DB] Falling back to memory DB:', err)
+    console.warn('[DB] Error reading DB file, fallback:', err)
+  }
+
+  if (memoryDb) {
+    return memoryDb
   }
 
   // Initialize with seed data
   memoryDb = {
     stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
-    orders: []
+    orders: [],
+    users: [DEFAULT_DEMO_USER],
+    sessions: []
   }
 
   persistDb(memoryDb)
   return memoryDb
 }
+
 
 function persistDb(data: DbSchema) {
   memoryDb = data
@@ -199,8 +233,84 @@ export function createOrder({
 export function resetDatabase() {
   const db: DbSchema = {
     stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
-    orders: []
+    orders: [],
+    users: [],
+    sessions: []
   }
   persistDb(db)
   return db
 }
+
+// User methods
+export function findUserByEmail(email: string): User | null {
+  const db = ensureDbFile()
+  const normalized = email.toLowerCase().trim()
+  return db.users.find((u) => u.email.toLowerCase().trim() === normalized) || null
+}
+
+export function findUserById(id: string): User | null {
+  const db = ensureDbFile()
+  return db.users.find((u) => u.id === id) || null
+}
+
+export function createUser(user: User): User {
+  const db = ensureDbFile()
+  db.users.push(user)
+  persistDb(db)
+  return user
+}
+
+// Session methods
+export function saveSession(session: Session): void {
+  const db = ensureDbFile()
+  // Clean any old session for this token
+  db.sessions = db.sessions.filter((s) => s.token !== session.token)
+  db.sessions.push(session)
+  persistDb(db)
+}
+
+export function findSession(token: string): Session | null {
+  const db = ensureDbFile()
+  const found = db.sessions.find((s) => s.token === token)
+  if (!found) return null
+
+  // Check expiration
+  if (new Date(found.expiresAt) < new Date()) {
+    db.sessions = db.sessions.filter((s) => s.token !== token)
+    persistDb(db)
+    return null
+  }
+
+  return found
+}
+
+export function deleteSession(token: string): void {
+  const db = ensureDbFile()
+  db.sessions = db.sessions.filter((s) => s.token !== token)
+  persistDb(db)
+}
+
+// Store methods
+export function slugExists(slug: string): boolean {
+  const db = ensureDbFile()
+  const normalized = slug.toLowerCase().trim()
+  return db.stores.some((s) => s.slug.toLowerCase().trim() === normalized)
+}
+
+export function createStore(store: Store): { success: boolean; store?: Store; error?: string } {
+  const db = ensureDbFile()
+  
+  if (slugExists(store.slug)) {
+    return { success: false, error: `Store with slug "${store.slug}" already exists.` }
+  }
+
+  db.stores.unshift(store)
+  persistDb(db)
+  return { success: true, store }
+}
+
+export function getStoresByOwner(ownerId: string): Store[] {
+  const db = ensureDbFile()
+  return db.stores.filter((s) => s.ownerId === ownerId)
+}
+

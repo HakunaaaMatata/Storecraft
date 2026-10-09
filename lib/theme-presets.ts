@@ -1,4 +1,5 @@
 import { ThemeConfig, ThemePresetId } from './types'
+export type { ThemeConfig, ThemePresetId }
 
 export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
   atelier: {

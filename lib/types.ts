@@ -52,6 +52,22 @@ export interface Product {
   variants: ProductVariant
 }
 
+export interface User {
+  id: string
+  name: string
+  email: string
+  passwordHash: string
+  salt: string
+  createdAt: string
+}
+
+export interface Session {
+  token: string
+  userId: string
+  expiresAt: string
+  createdAt: string
+}
+
 export interface Store {
   id: string
   slug: string
@@ -65,7 +81,17 @@ export interface Store {
   heroSubtitle: string
   heroImage: string
   products: Product[]
+  ownerId?: string
+  ownerName?: string
+  ownerEmail?: string
+  phone?: string
+  address?: string
+  businessType?: string
+  description?: string
+  logoUrl?: string
+  createdAt?: string
 }
+
 
 export interface CartItem {
   id: string

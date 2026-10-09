@@ -3,15 +3,25 @@
 import { useState, useEffect } from 'react'
 import { ArrowRight, LayoutTemplate, Palette, Type, Image as ImageIcon, Sparkles, ArrowLeft, Save, Check } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
+import { useAuth } from '@/lib/use-auth'
+import { useRouter } from 'next/navigation'
 import { THEME_PRESETS, StoreThemePreset, ThemeConfig } from '@/lib/store-data'
 import { motion, AnimatePresence } from 'motion/react'
 import Link from 'next/link'
 
 export default function ThemeCustomizerPage() {
   const { activeStore, actions, isClient } = useStorecraft()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const router = useRouter()
   const [draft, setDraft] = useState<ThemeConfig | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'preset' | 'colors' | 'typography' | 'hero'>('preset')
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push('/login?redirect=/dashboard/theme')
+    }
+  }, [authLoading, isAuthenticated, router])
 
   useEffect(() => {
     if (activeStore && !draft) {
@@ -19,7 +29,7 @@ export default function ThemeCustomizerPage() {
     }
   }, [activeStore, draft])
 
-  if (!isClient || !draft || !activeStore) return null
+  if (!isClient || authLoading || !draft || !activeStore) return null
 
   const handleSave = () => {
     setIsSaving(true)

@@ -1,32 +1,81 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { motion } from 'motion/react'
-import { Check, ArrowRight, ArrowLeft, Store, Package, Palette, Rocket, Upload, Sparkles, Plus, X } from 'lucide-react'
-import { db, THEME_PRESETS, StoreThemePreset, Product, Store as StoreType } from '@/lib/store-data'
-import { Button } from '@/components/ui/button'
-
-const STEPS = [
-  { id: 1, name: 'Business Details', icon: Store },
-  { id: 2, name: 'Categories', icon: Package },
-  { id: 3, name: 'Products', icon: Upload },
-  { id: 4, name: 'Theme', icon: Palette },
-  { id: 5, name: 'Launch', icon: Rocket },
-]
+import Link from 'next/link'
+import { motion, AnimatePresence } from 'motion/react'
+import { 
+  Check, 
+  ArrowRight, 
+  ArrowLeft, 
+  Store, 
+  Package, 
+  Palette, 
+  Rocket, 
+  Upload, 
+  Sparkles, 
+  Plus, 
+  X, 
+  FileText, 
+  Image as ImageIcon, 
+  AlertCircle, 
+  CheckCircle2, 
+  ShieldCheck, 
+  Lock,
+  Layers,
+  Edit2
+} from 'lucide-react'
+import { useAuth } from '@/lib/use-auth'
+import { THEME_PRESETS, ThemeConfig } from '@/lib/theme-presets'
+import { ThemePresetId, Product } from '@/lib/types'
+import { db } from '@/lib/store-data'
 
 const PREDEFINED_CATEGORIES = [
-  'Fashion', 'Electronics', 'Beauty & Skincare', 'Home & Living', 
-  'Food & Beverages', 'Sports & Fitness', 'Books & Stationery', 
-  'Toys & Games', 'Jewelry & Accessories'
+  'Fashion',
+  'Electronics',
+  'Beauty and Skincare',
+  'Home and Living',
+  'Food and Beverages',
+  'Sports and Fitness',
+  'Books and Stationery',
+  'Toys and Games',
+  'Jewelry and Accessories',
+  'Other',
 ]
+
+const BUSINESS_TYPES = [
+  'Home & Living',
+  'Fashion & Apparel',
+  'Technology & Electronics',
+  'Food & Beverages',
+  'Beauty & Wellness',
+  'Sports & Fitness',
+  'Books & Stationery',
+  'Artisanal & Crafts',
+  'General Retail',
+]
+
+const STEPS = [
+  { id: 1, title: 'Business Info', subtitle: 'Store details & branding', icon: Store },
+  { id: 2, title: 'Categories', subtitle: 'Catalog hierarchy', icon: Package },
+  { id: 3, title: 'Product Setup', subtitle: 'Catalog population', icon: Upload },
+  { id: 4, title: 'Theme Selection', subtitle: 'Brand point of view', icon: Palette },
+  { id: 5, title: 'Review & Launch', subtitle: 'Verify & open doors', icon: Rocket },
+]
+
+const DRAFT_STORAGE_KEY = 'storecraft_onboarding_draft_v2'
 
 export default function OnboardPage() {
   const router = useRouter()
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  
   const [step, setStep] = useState(1)
   const [isClient, setIsClient] = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
+  const [launchError, setLaunchError] = useState<string | null>(null)
+  const [launchSuccess, setLaunchSuccess] = useState(false)
 
+  // Form State
   const [formData, setFormData] = useState({
     name: '',
     ownerName: '',
@@ -35,496 +84,1522 @@ export default function OnboardPage() {
     address: '',
     businessType: 'Home & Living',
     description: '',
-    categories: [] as string[],
-    themePreset: 'forma' as StoreThemePreset,
-    productsOption: 'none' as 'none' | 'sample' | 'csv'
+    logoUrl: '',
+    logoName: '',
+    categories: ['Home and Living'],
+    productsOption: 'sample' as 'sample' | 'csv' | 'none',
+    themePreset: 'forma' as ThemePresetId,
   })
 
+  // Field Errors
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [customCategory, setCustomCategory] = useState('')
+  const [categoryError, setCategoryError] = useState<string | null>(null)
 
+  // CSV Import State
+  const [csvFile, setCsvFile] = useState<{ name: string; size: number; count: number; rows: Partial<Product>[] } | null>(null)
+  const [csvError, setCsvError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const logoInputRef = useRef<HTMLInputElement>(null)
+
+  // Load saved draft and prefill with user info on mount
   useEffect(() => {
     setIsClient(true)
-    const saved = localStorage.getItem('storecraft_onboarding_state')
+    const saved = localStorage.getItem(DRAFT_STORAGE_KEY)
     if (saved) {
       try {
         const parsed = JSON.parse(saved)
         if (parsed.step) setStep(parsed.step)
         if (parsed.formData) setFormData(parsed.formData)
-      } catch (e) {}
+        if (parsed.csvFile) setCsvFile(parsed.csvFile)
+      } catch (e) {
+        console.warn('Failed to parse onboarding draft:', e)
+      }
     }
   }, [])
 
+  // Auto-fill user credentials when authenticated
+  useEffect(() => {
+    if (user && isClient) {
+      setFormData(prev => ({
+        ...prev,
+        ownerName: prev.ownerName || user.name,
+        email: prev.email || user.email,
+      }))
+    }
+  }, [user, isClient])
+
+  // Persist draft across refreshes
   useEffect(() => {
     if (isClient) {
-      localStorage.setItem('storecraft_onboarding_state', JSON.stringify({ step, formData }))
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
+        step,
+        formData,
+        csvFile: csvFile ? { name: csvFile.name, size: csvFile.size, count: csvFile.count } : null,
+      }))
     }
-  }, [step, formData, isClient])
+  }, [step, formData, csvFile, isClient])
 
-  const updateForm = (updates: Partial<typeof formData>) => {
-    setFormData(prev => ({ ...prev, ...updates }))
+  if (!isClient || authLoading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
+        <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 600 }}>Loading StoreCraft setup wizard...</p>
+      </div>
+    )
   }
 
-  const toggleCategory = (cat: string) => {
-    if (formData.categories.includes(cat)) {
-      updateForm({ categories: formData.categories.filter(c => c !== cat) })
-    } else {
-      updateForm({ categories: [...formData.categories, cat] })
+  // Handle Logo Upload
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validation
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']
+    if (!validTypes.includes(file.type)) {
+      setFieldErrors(prev => ({ ...prev, logo: 'Please select a valid image file (PNG, JPG, WEBP, or SVG).' }))
+      return
     }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setFieldErrors(prev => ({ ...prev, logo: 'Logo file size cannot exceed 5MB.' }))
+      return
+    }
+
+    setFieldErrors(prev => {
+      const rest = { ...prev }
+      delete rest.logo
+      return rest
+    })
+
+    const reader = new FileReader()
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string
+      setFormData(prev => ({
+        ...prev,
+        logoUrl: result,
+        logoName: file.name,
+      }))
+    }
+    reader.readAsDataURL(file)
   }
 
-  const addCustomCategory = () => {
-    if (customCategory.trim() && !formData.categories.includes(customCategory.trim())) {
-      updateForm({ categories: [...formData.categories, customCategory.trim()] })
-      setCustomCategory('')
-    }
+  const removeLogo = () => {
+    setFormData(prev => ({ ...prev, logoUrl: '', logoName: '' }))
+    if (logoInputRef.current) logoInputRef.current.value = ''
   }
 
-  const handleNext = () => setStep(s => Math.min(s + 1, 5))
-  const handlePrev = () => setStep(s => Math.max(s - 1, 1))
-
-  const [uploadedProducts, setUploadedProducts] = useState<Omit<Product, 'id' | 'storeId'>[]>([])
-  const [csvFileName, setCsvFileName] = useState<string>('')
-  const [isSuccess, setIsSuccess] = useState(false)
-  const [createdStoreData, setCreatedStoreData] = useState<StoreType | null>(null)
-
+  // Handle CSV Import
   const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    setCsvFileName(file.name)
+
+    setCsvError(null)
+
+    if (!file.name.endsWith('.csv') && !file.name.endsWith('.xlsx')) {
+      setCsvError('Please upload a valid .csv file.')
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = (evt) => {
-      const text = evt.target?.result as string
-      if (!text) return
-      const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0)
-      if (lines.length > 1) {
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
-        const nameIdx = headers.findIndex(h => h.includes('name') || h.includes('title'))
-        const priceIdx = headers.findIndex(h => h.includes('price'))
-        const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity'))
-        const skuIdx = headers.findIndex(h => h.includes('sku') || h.includes('code'))
-        const catIdx = headers.findIndex(h => h.includes('category'))
-
-        const parsedProds: Omit<Product, 'id' | 'storeId'>[] = []
-        for (let i = 1; i < lines.length; i++) {
-          const parts = lines[i].split(',').map(p => p.trim())
-          const name = nameIdx >= 0 ? parts[nameIdx] : parts[0]
-          if (!name) continue
-          const price = priceIdx >= 0 ? parseFloat(parts[priceIdx]) || 25 : 25
-          const stock = stockIdx >= 0 ? parseInt(parts[stockIdx], 10) || 10 : 10
-          const sku = skuIdx >= 0 ? parts[skuIdx] : `SKU-${100 + i}`
-          const category = catIdx >= 0 && parts[catIdx] ? parts[catIdx] : (formData.categories[0] || 'General')
-
-          parsedProds.push({
-            name,
-            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            description: `Imported during store setup.`,
-            category,
-            price,
-            stock,
-            sku,
-            images: ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80'],
-            createdAt: new Date().toISOString()
-          })
+      try {
+        const text = evt.target?.result as string
+        const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0)
+        if (lines.length < 2) {
+          setCsvError('CSV file must contain a header row and at least 1 product record.')
+          return
         }
-        setUploadedProducts(parsedProds)
-        updateForm({ productsOption: 'csv' })
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''))
+        const titleIdx = headers.findIndex(h => h.includes('name') || h.includes('title') || h.includes('product'))
+        const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cost'))
+        const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('inventory') || h.includes('qty'))
+
+        if (titleIdx === -1 || priceIdx === -1) {
+          setCsvError('CSV must include at least "Title/Name" and "Price" columns.')
+          return
+        }
+
+        const parsedRows: Partial<Product>[] = []
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''))
+          if (cols[titleIdx]) {
+            parsedRows.push({
+              title: cols[titleIdx],
+              price: parseFloat(cols[priceIdx]) || 25,
+              inventory: stockIdx !== -1 ? parseInt(cols[stockIdx]) || 10 : 10,
+              category: formData.categories[0] || 'General',
+            })
+          }
+        }
+
+        setCsvFile({
+          name: file.name,
+          size: file.size,
+          count: parsedRows.length,
+          rows: parsedRows,
+        })
+      } catch (err) {
+        setCsvError('Failed to parse CSV file. Ensure standard comma-separated format.')
       }
     }
     reader.readAsText(file)
   }
 
-  const handleLaunch = () => {
-    setIsLaunching(true)
-    const slug = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') || 'my-store'
-    const newStoreId = `store-${Date.now()}`
-
-    const newStore: StoreType = {
-      id: newStoreId,
-      slug,
-      name: formData.name || 'My Store',
-      ownerName: formData.ownerName || 'Store Owner',
-      email: formData.email,
-      phone: formData.phone,
-      businessType: formData.businessType,
-      address: formData.address,
-      description: formData.description,
-      categories: formData.categories.length > 0 ? formData.categories : ['General'],
-      theme: THEME_PRESETS[formData.themePreset],
-      createdAt: new Date().toISOString()
-    }
-
-    db.saveStore(newStore)
-    db.setActiveStore(newStoreId)
-
-    if (formData.productsOption === 'sample') {
-      const dummyProducts: Product[] = (formData.categories.length > 0 ? formData.categories : ['Home & Living', 'Accessories']).map((cat, i) => ({
-        id: `prod-gen-${Date.now()}-${i}`,
-        storeId: newStoreId,
-        name: `Sample ${cat} Item`,
-        slug: `sample-${cat.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-item`,
-        description: `This is an automatically generated sample product for the ${cat} category. Customize it in your dashboard.`,
-        category: cat,
-        price: Math.floor(Math.random() * 80) + 24,
-        stock: Math.floor(Math.random() * 30) + 4,
-        sku: `${cat.substring(0,3).toUpperCase()}-00${i + 1}`,
-        images: ['https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80'],
-        createdAt: new Date().toISOString(),
-        featured: i < 3
-      }))
-      dummyProducts.forEach(p => db.saveProduct(p))
-    } else if (formData.productsOption === 'csv' && uploadedProducts.length > 0) {
-      uploadedProducts.forEach((p, i) => {
-        db.saveProduct({
-          ...p,
-          id: `prod-csv-${Date.now()}-${i}`,
-          storeId: newStoreId
-        })
-      })
-    }
-
-    // Sync with server DB so the public storefront can render it immediately
-    const productsToSync = formData.productsOption === 'sample' ? db.getProducts(newStoreId) : (formData.productsOption === 'csv' ? uploadedProducts : [])
-    fetch('/api/sync-onboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ store: newStore, products: productsToSync })
-    }).catch(e => console.warn('Failed to sync to server DB', e))
-
-    localStorage.removeItem('storecraft_onboarding_state')
-
-    setTimeout(() => {
-      setIsLaunching(false)
-      setCreatedStoreData(newStore)
-      setIsSuccess(true)
-    }, 600)
+  // Category Actions
+  const toggleCategory = (cat: string) => {
+    setCategoryError(null)
+    setFormData(prev => {
+      const exists = prev.categories.includes(cat)
+      if (exists) {
+        if (prev.categories.length === 1) {
+          setCategoryError('Store must have at least one category.')
+          return prev
+        }
+        return { ...prev, categories: prev.categories.filter(c => c !== cat) }
+      } else {
+        return { ...prev, categories: [...prev.categories, cat] }
+      }
+    })
   }
 
-  if (!isClient) return null
+  const handleAddCustomCategory = () => {
+    const trimmed = customCategory.trim()
+    setCategoryError(null)
 
-  const isStep1Valid = formData.name.trim() !== '' && formData.email.trim() !== ''
+    if (!trimmed) {
+      setCategoryError('Category name cannot be empty.')
+      return
+    }
 
-  // Input styling to match the original theme tokens (emerald green primary, navy foreground)
-  const inputClassName = "w-full rounded-md border border-border px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary bg-card text-foreground"
+    if (formData.categories.some(c => c.toLowerCase() === trimmed.toLowerCase())) {
+      setCategoryError(`"${trimmed}" is already added to categories.`)
+      return
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      categories: [...prev.categories, trimmed],
+    }))
+    setCustomCategory('')
+  }
+
+  // Step Validation
+  const validateStep = (currentStep: number): boolean => {
+    const errors: Record<string, string> = {}
+
+    if (currentStep === 1) {
+      if (!formData.name.trim() || formData.name.trim().length < 2) {
+        errors.name = 'Store name must be at least 2 characters.'
+      } else if (formData.name.trim().length > 60) {
+        errors.name = 'Store name cannot exceed 60 characters.'
+      }
+
+      if (!formData.ownerName.trim() || formData.ownerName.trim().length < 2) {
+        errors.ownerName = 'Owner name must be at least 2 characters.'
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!formData.email.trim() || !emailRegex.test(formData.email.trim())) {
+        errors.email = 'Please provide a valid contact email.'
+      }
+
+      const phoneRegex = /^[\d\s\+\-\(\)]{7,20}$/
+      if (!formData.phone.trim() || !phoneRegex.test(formData.phone.trim())) {
+        errors.phone = 'Please provide a valid phone number (at least 7 digits).'
+      }
+
+      if (!formData.address.trim() || formData.address.trim().length < 5) {
+        errors.address = 'Please enter a valid business address.'
+      }
+    }
+
+    if (currentStep === 2) {
+      if (formData.categories.length === 0) {
+        errors.categories = 'Please select at least one product category.'
+      }
+    }
+
+    if (currentStep === 3) {
+      if (formData.productsOption === 'csv' && (!csvFile || csvFile.count === 0)) {
+        errors.products = 'Please upload a CSV file or choose "Generate sample products".'
+      }
+    }
+
+    setFieldErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  const handleNext = () => {
+    if (validateStep(step)) {
+      setStep(s => Math.min(s + 1, 5))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handlePrev = () => {
+    setFieldErrors({})
+    setStep(s => Math.max(s - 1, 1))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  // Launch Store Submission
+  const handleLaunch = async () => {
+    if (isLaunching) return
+
+    // Final client verification
+    if (!validateStep(1) || !validateStep(2)) {
+      setLaunchError('Please verify all business details and categories before launching.')
+      return
+    }
+
+    // Auth gate check
+    if (!isAuthenticated) {
+      router.push('/login?redirect=/onboard')
+      return
+    }
+
+    setIsLaunching(true)
+    setLaunchError(null)
+
+    try {
+      const res = await fetch('/api/stores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          logoUrl: formData.logoUrl,
+          ownerName: formData.ownerName,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          businessType: formData.businessType,
+          description: formData.description,
+          categories: formData.categories,
+          productsOption: formData.productsOption,
+          importedProducts: csvFile?.rows,
+          themePreset: formData.themePreset,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        setLaunchError(data.error || (data.errors ? Object.values(data.errors)[0] as string : 'Failed to launch store.'))
+        setIsLaunching(false)
+        return
+      }
+
+      // Also persist to client localStorage db so client hooks immediately recognize it
+      const createdStore = data.store
+      if (createdStore) {
+        db.saveStore({
+          id: createdStore.id,
+          slug: createdStore.slug,
+          name: createdStore.name,
+          ownerName: createdStore.ownerName || formData.ownerName,
+          email: createdStore.ownerEmail || formData.email,
+          phone: createdStore.phone || formData.phone,
+          businessType: createdStore.businessType || formData.businessType,
+          address: createdStore.address || formData.address,
+          description: createdStore.description || formData.description,
+          logoUrl: createdStore.logoUrl,
+          categories: createdStore.categories.filter((c: string) => c !== 'All'),
+          theme: {
+            preset: createdStore.preset,
+            primaryColor: '#101828',
+            accentColor: '#10B981',
+            fontHeading: 'DM Serif Display',
+            fontBody: 'Manrope',
+            heroTitle: createdStore.heroHeadline,
+            heroSubtitle: createdStore.heroSubtitle,
+            heroCta: 'Explore Collection',
+            heroImage: createdStore.heroImage,
+            announcement: createdStore.announcement,
+          },
+          createdAt: createdStore.createdAt || new Date().toISOString(),
+        })
+
+        // Save generated products to client db
+        if (createdStore.products && Array.isArray(createdStore.products)) {
+          for (const p of createdStore.products) {
+            db.saveProduct({
+              id: p.id,
+              storeId: createdStore.id,
+              name: p.title,
+              slug: p.id,
+              description: p.description,
+              category: p.category,
+              price: p.price,
+              compareAtPrice: p.compareAtPrice,
+              stock: p.inventory,
+              sku: p.sku,
+              images: p.images || [],
+              createdAt: new Date().toISOString(),
+            })
+          }
+        }
+
+        db.setActiveStore(createdStore.id)
+      }
+
+      // Clear draft
+      localStorage.removeItem(DRAFT_STORAGE_KEY)
+      setLaunchSuccess(true)
+
+      // Redirect to owner dashboard
+      setTimeout(() => {
+        router.push('/dashboard')
+      }, 1000)
+
+    } catch (err) {
+      setLaunchError('Network error connecting to store server. Please try again.')
+      setIsLaunching(false)
+    }
+  }
+
+  const activeThemeConfig = THEME_PRESETS[formData.themePreset]
 
   return (
-    <div className="min-h-screen bg-background flex flex-col text-foreground font-sans">
-      <header className="h-16 flex items-center px-6 md:px-12 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-2 font-black tracking-tight text-lg text-foreground">
-          <div className="w-6 h-6 rounded bg-primary text-primary-foreground flex items-center justify-center">
-            <Sparkles className="w-4 h-4" />
-          </div>
-          Storecraft
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* Wizard Header */}
+      <header className="site-header">
+        <Link href="/" className="brand">
+          <div className="brand-mark"><span /></div>
+          <span className="brand-name">StoreCraft</span>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px' }}>
+          {isAuthenticated ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ color: '#64748B' }}>Signed in as</span>
+              <strong style={{ color: '#0F172A' }}>{user?.name}</strong>
+            </div>
+          ) : (
+            <Link href="/login?redirect=/onboard" style={{ color: '#059669', fontWeight: 700 }}>
+              Sign in to save progress →
+            </Link>
+          )}
         </div>
       </header>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <aside className="md:w-64 border-r border-border bg-muted p-6 md:p-8 shrink-0 md:overflow-y-auto">
-          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">Setup Progress</p>
-          <div className="flex md:flex-col gap-4 overflow-x-auto md:overflow-visible pb-4 md:pb-0">
-            {STEPS.map((s) => (
-              <div key={s.id} className={`flex items-center gap-3 shrink-0 ${step === s.id ? 'text-primary font-bold' : step > s.id ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
-                  step === s.id ? 'border-primary bg-primary/10' : 
-                  step > s.id ? 'border-primary bg-primary text-primary-foreground' : 'border-border'
-                }`}>
-                  {step > s.id ? <Check className="w-4 h-4" /> : <s.icon className="w-4 h-4" />}
-                </div>
-                <span className="text-sm hidden md:block">{s.name}</span>
-              </div>
-            ))}
+      {/* Main Wizard Container */}
+      <main style={{ flex: 1, padding: '36px 4vw 60px', maxWidth: '1080px', margin: '0 auto', width: '100%' }}>
+        
+        {/* Step Indicator */}
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '8px',
+          border: '1px solid #E2E8F0',
+          padding: '20px 28px',
+          marginBottom: '28px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+        }}>
+          {/* Progress bar */}
+          <div style={{
+            height: '4px',
+            backgroundColor: '#E2E8F0',
+            borderRadius: '9999px',
+            marginBottom: '18px',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              height: '100%',
+              backgroundColor: '#10B981',
+              width: `${(step / STEPS.length) * 100}%`,
+              transition: 'width 0.3s ease',
+            }} />
           </div>
-        </aside>
 
-        <main className="flex-1 overflow-y-auto p-6 md:p-12 relative">
-          <div className="max-w-2xl mx-auto">
-            {isSuccess && createdStoreData ? (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
-                <div className="w-16 h-16 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
-                  <Check className="w-8 h-8" />
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${STEPS.length}, 1fr)`,
+            gap: '8px',
+          }}>
+            {STEPS.map((s) => {
+              const Icon = s.icon
+              const isPast = step > s.id
+              const isCurrent = step === s.id
+              return (
+                <div
+                  key={s.id}
+                  onClick={() => {
+                    if (s.id < step) setStep(s.id)
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: s.id < step ? 'pointer' : 'default',
+                    opacity: isCurrent || isPast ? 1 : 0.45,
+                  }}
+                >
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    backgroundColor: isPast ? '#10B981' : isCurrent ? '#101828' : '#F1F5F9',
+                    color: isPast ? '#FFFFFF' : isCurrent ? '#FFFFFF' : '#64748B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}>
+                    {isPast ? <Check size={14} /> : s.id}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '11px', fontWeight: 800, color: isCurrent ? '#101828' : '#64748B' }}>
+                      {s.title}
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#94A3B8' }}>
+                      {s.subtitle}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-primary text-xs font-bold tracking-widest uppercase mb-2">Store Creation Success</p>
-                <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">
-                  Your store is ready.
-                </h1>
-                <p className="text-muted-foreground max-w-md mx-auto mb-8">
-                  <strong>{createdStoreData.name}</strong> has been created with all your settings, themes, and products loaded.
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Wizard Step Body */}
+        <div style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '10px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 4px 20px -2px rgba(16, 24, 40, 0.05)',
+          padding: '36px',
+        }}>
+          
+          {/* STEP 1: BUSINESS DETAILS */}
+          {step === 1 && (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <span className="eyebrow" style={{ color: '#059669' }}>Step 1 of 5</span>
+                <h2 style={{ fontSize: '26px', margin: '4px 0 8px', letterSpacing: '-0.03em' }}>
+                  Tell us about your business.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  These details establish your store identity, legal footer, and owner profile.
                 </p>
+              </div>
 
-                <div className="bg-card border border-border rounded-lg p-6 max-w-md mx-auto mb-8 text-left space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Store Name:</span>
-                    <strong className="text-foreground">{createdStoreData.name}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Owner:</span>
-                    <strong className="text-foreground">{createdStoreData.ownerName}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Storefront Link:</span>
-                    <strong className="text-primary">{createdStoreData.slug}.storecraft.app</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Theme Direction:</span>
-                    <strong className="capitalize text-foreground">{createdStoreData.theme.preset}</strong>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Catalog Status:</span>
-                    <strong className="text-foreground">
-                      {formData.productsOption === 'sample' 
-                        ? `${formData.categories.length || 2} sample products loaded`
-                        : formData.productsOption === 'csv'
-                        ? `${uploadedProducts.length} CSV products loaded`
-                        : 'Ready for manual addition'}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Button 
-                    onClick={() => router.push('/dashboard')} 
-                    className="w-full sm:w-auto px-8 py-3 text-sm font-bold bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    Go to Dashboard <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => window.open(`/store/${createdStoreData.slug}`, '_blank')}
-                    className="w-full sm:w-auto"
-                  >
-                    Preview Live Storefront
-                  </Button>
-                </div>
-              </motion.div>
-            ) : (
-              <>
-                {step === 1 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <div className="mb-8">
-                      <p className="text-primary text-sm font-bold tracking-widest uppercase mb-2">Step 1</p>
-                      <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">Tell us about your business.</h1>
-                      <p className="text-muted-foreground">We’ll tailor your workspace and storefront around your ambition.</p>
-                    </div>
-                    
-                    <div className="space-y-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <label className="block">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Store Name *</span>
-                          <input type="text" value={formData.name} onChange={e => updateForm({ name: e.target.value })} placeholder="e.g. Northstar Goods" className={inputClassName} />
-                        </label>
-                        <label className="block">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Owner Name</span>
-                          <input type="text" value={formData.ownerName} onChange={e => updateForm({ ownerName: e.target.value })} placeholder="Your full name" className={inputClassName} />
-                        </label>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        <label className="block">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Contact Email *</span>
-                          <input type="email" value={formData.email} onChange={e => updateForm({ email: e.target.value })} placeholder="hello@yourstore.com" className={inputClassName} />
-                        </label>
-                        <label className="block">
-                          <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Phone Number</span>
-                          <input type="tel" value={formData.phone} onChange={e => updateForm({ phone: e.target.value })} placeholder="+1 (555) 000-0000" className={inputClassName} />
-                        </label>
-                      </div>
-
-                      <label className="block">
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Business Address</span>
-                        <input type="text" value={formData.address} onChange={e => updateForm({ address: e.target.value })} placeholder="123 Main St, City, Country" className={inputClassName} />
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Primary Business Type</span>
-                        <select value={formData.businessType} onChange={e => updateForm({ businessType: e.target.value })} className={inputClassName}>
-                          <option>Home & Living</option>
-                          <option>Fashion & Apparel</option>
-                          <option>Electronics</option>
-                          <option>Beauty & Skincare</option>
-                          <option>Food & Grocery</option>
-                          <option>Other</option>
-                        </select>
-                      </label>
-
-                      <label className="block">
-                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1.5 block">Brief Description</span>
-                        <textarea value={formData.description} onChange={e => updateForm({ description: e.target.value })} placeholder="What does your store sell?" rows={3} className={`${inputClassName} resize-none`} />
-                      </label>
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 2 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <div className="mb-8">
-                      <p className="text-primary text-sm font-bold tracking-widest uppercase mb-2">Step 2</p>
-                      <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">What are you selling?</h1>
-                      <p className="text-muted-foreground">Select or add categories to organize your catalog.</p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {PREDEFINED_CATEGORIES.map(cat => (
-                        <button key={cat} onClick={() => toggleCategory(cat)} className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${formData.categories.includes(cat) ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-card text-foreground hover:border-primary/50'}`}>
-                          {cat} {formData.categories.includes(cat) && <Check className="inline w-3 h-3 ml-1" />}
-                        </button>
-                      ))}
-                      {formData.categories.filter(c => !PREDEFINED_CATEGORIES.includes(c)).map(cat => (
-                        <button key={cat} onClick={() => toggleCategory(cat)} className="px-4 py-2 rounded-full border border-primary bg-primary/10 text-primary text-sm font-medium transition-colors flex items-center gap-1">
-                          {cat} <X className="w-3 h-3" />
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-2 max-w-sm">
-                      <input type="text" value={customCategory} onChange={e => setCustomCategory(e.target.value)} onKeyDown={e => e.key === 'Enter' && addCustomCategory()} placeholder="Add custom category..." className={inputClassName} />
-                      <Button variant="secondary" onClick={addCustomCategory} type="button"><Plus className="w-4 h-4 mr-1" /> Add</Button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 3 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <div className="mb-8">
-                      <p className="text-primary text-sm font-bold tracking-widest uppercase mb-2">Step 3</p>
-                      <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">Bring your products along.</h1>
-                      <p className="text-muted-foreground">Start with realistic sample products to explore the platform, or upload your own inventory.</p>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <button onClick={() => updateForm({ productsOption: 'sample' })} className={`text-left p-6 rounded-lg border-2 transition-all ${formData.productsOption === 'sample' ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-border bg-card hover:border-primary/50'}`}>
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4"><Sparkles className="w-5 h-5" /></div>
-                        <h3 className="font-bold text-base mb-1 text-foreground">Generate Sample Products</h3>
-                        <p className="text-sm text-muted-foreground">We'll automatically generate realistic dummy products based on your selected categories.</p>
-                      </button>
-
-                      <div className={`text-left p-6 rounded-lg border-2 transition-all ${formData.productsOption === 'csv' ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-border bg-card hover:border-primary/50'}`}>
-                        <div className="w-10 h-10 rounded-full bg-muted text-foreground flex items-center justify-center mb-4"><Upload className="w-5 h-5" /></div>
-                        <h3 className="font-bold text-base mb-1 text-foreground">Upload CSV or Excel</h3>
-                        <p className="text-sm text-muted-foreground mb-3">Select a .csv spreadsheet with product names, prices, and stock.</p>
-                        <input type="file" accept=".csv,text/csv" onChange={handleCsvUpload} className="text-xs text-muted-foreground file:mr-2 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 cursor-pointer" />
-                        {csvFileName && (
-                          <p className="text-xs font-bold text-primary mt-2 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> {csvFileName} ({uploadedProducts.length} items parsed)
-                          </p>
-                        )}
-                      </div>
-                      
-                      <button onClick={() => updateForm({ productsOption: 'none' })} className={`text-left p-6 rounded-lg border-2 md:col-span-2 transition-all ${formData.productsOption === 'none' ? 'border-primary bg-primary/5 ring-4 ring-primary/10' : 'border-border bg-card hover:border-primary/50'}`}>
-                        <h3 className="font-bold text-base mb-1 text-foreground">Skip for now</h3>
-                        <p className="text-sm text-muted-foreground">I'll add my products manually from the dashboard later.</p>
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 4 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <div className="mb-8">
-                      <p className="text-primary text-sm font-bold tracking-widest uppercase mb-2">Step 4</p>
-                      <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">Make it unmistakably yours.</h1>
-                      <p className="text-muted-foreground">Choose a visual direction for your storefront. You can change everything later.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      {(Object.keys(THEME_PRESETS) as StoreThemePreset[]).map((themeId) => {
-                        const theme = THEME_PRESETS[themeId]
-                        const isActive = formData.themePreset === themeId
-                        return (
-                          <button key={themeId} onClick={() => updateForm({ themePreset: themeId })} className={`text-left rounded-lg border-2 overflow-hidden transition-all ${isActive ? 'border-primary ring-4 ring-primary/20' : 'border-border hover:border-primary/50'}`}>
-                            <div className="h-32 bg-cover bg-center" style={{ backgroundImage: `url(${theme.heroImage})` }} />
-                            <div className="p-4 bg-card flex justify-between items-center text-foreground">
-                              <div>
-                                <strong className="block capitalize font-bold">{themeId}</strong>
-                                <small className="text-muted-foreground" style={{ fontFamily: theme.fontHeading }}>{theme.fontHeading}</small>
-                              </div>
-                              <div className="flex gap-1">
-                                <span className="w-5 h-5 rounded-full border border-border" style={{ backgroundColor: theme.primaryColor }}></span>
-                                <span className="w-5 h-5 rounded-full border border-border" style={{ backgroundColor: theme.accentColor }}></span>
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-
-                {step === 5 && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-                    <div className="mb-8">
-                      <p className="text-primary text-sm font-bold tracking-widest uppercase mb-2">Step 5</p>
-                      <h1 className="text-4xl font-serif tracking-tight text-foreground mb-3">Review & Launch.</h1>
-                      <p className="text-muted-foreground">Ready to open your doors? Review your store details before launching.</p>
-                    </div>
-
-                    <div className="bg-card border border-border rounded-lg p-6 space-y-6 text-foreground">
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <p className="text-muted-foreground mb-1">Store Name</p>
-                          <p className="font-bold">{formData.name || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">Owner</p>
-                          <p className="font-bold">{formData.ownerName || 'Not provided'}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">Business Type</p>
-                          <p className="font-bold">{formData.businessType}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground mb-1">Theme</p>
-                          <p className="font-bold capitalize">{formData.themePreset}</p>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground text-sm mb-2">Categories</p>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.categories.length > 0 ? (
-                             formData.categories.map(c => <span key={c} className="px-2.5 py-1 rounded bg-muted text-xs font-medium">{c}</span>)
-                          ) : (
-                            <span className="text-sm">None selected</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="text-muted-foreground text-sm mb-1">Products</p>
-                        <p className="font-bold text-sm">
-                          {formData.productsOption === 'sample' ? 'Will generate sample products' : 
-                           formData.productsOption === 'csv' ? `Will import ${uploadedProducts.length} CSV products` : 'Starting fresh (no products)'}
-                        </p>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                <div className="mt-12 flex justify-between pt-6 border-t border-border">
-                  {step > 1 ? (
-                    <Button variant="outline" onClick={handlePrev} disabled={isLaunching}>
-                      <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                    </Button>
-                  ) : <div />}
-                  
-                  {step < 5 ? (
-                    <Button onClick={handleNext} disabled={step === 1 && !isStep1Valid}>
-                      Continue <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
-                  ) : (
-                    <Button onClick={handleLaunch} disabled={isLaunching || (step === 1 && !isStep1Valid)}>
-                      {isLaunching ? (
-                        <>Launching Storecraft... <Sparkles className="w-4 h-4 ml-2 animate-pulse" /></>
-                      ) : (
-                        <>Launch Store <Rocket className="w-4 h-4 ml-2" /></>
-                      )}
-                    </Button>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {/* Store Name */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Store Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Northstar Goods, Atelier Minimal, Apex Audio"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${fieldErrors.name ? '#EF4444' : '#CBD5E1'}`,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  {fieldErrors.name && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.name}</p>
                   )}
                 </div>
-              </>
-            )}
 
+                {/* Store Logo Upload */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Store Brand Logo (Optional)
+                  </label>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '16px',
+                    padding: '16px',
+                    border: `1px dashed ${fieldErrors.logo ? '#EF4444' : '#CBD5E1'}`,
+                    borderRadius: '8px',
+                    backgroundColor: '#F8FAFC',
+                  }}>
+                    {formData.logoUrl ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                        <div style={{
+                          width: '56px',
+                          height: '56px',
+                          borderRadius: '8px',
+                          border: '1px solid #E2E8F0',
+                          backgroundColor: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                        }}>
+                          <img src={formData.logoUrl} alt="Store Logo Preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <strong style={{ fontSize: '12px', color: '#0F172A', display: 'block' }}>{formData.logoName || 'store-logo.png'}</strong>
+                          <span style={{ fontSize: '10px', color: '#059669', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <CheckCircle2 size={12} /> Ready for storefront
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeLogo}
+                          style={{
+                            background: '#FEE2E2',
+                            color: '#991B1B',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+                        <div style={{
+                          width: '46px',
+                          height: '46px',
+                          borderRadius: '8px',
+                          backgroundColor: '#E2E8F0',
+                          color: '#64748B',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          <ImageIcon size={20} />
+                        </div>
+                        <div>
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
+                            onChange={handleLogoUpload}
+                            style={{ display: 'none' }}
+                            id="store-logo-input"
+                          />
+                          <label
+                            htmlFor="store-logo-input"
+                            style={{
+                              backgroundColor: '#101828',
+                              color: '#FFFFFF',
+                              padding: '6px 12px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'inline-block',
+                              marginBottom: '4px',
+                            }}
+                          >
+                            Upload Brand Logo
+                          </label>
+                          <p style={{ margin: 0, fontSize: '10px', color: '#64748B' }}>
+                            Supports PNG, JPG, WEBP, SVG up to 5MB
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {fieldErrors.logo && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.logo}</p>
+                  )}
+                </div>
+
+                {/* Owner Name */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Owner Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ownerName}
+                    onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                    placeholder="e.g. Jamie Davis"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${fieldErrors.ownerName ? '#EF4444' : '#CBD5E1'}`,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  {fieldErrors.ownerName && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.ownerName}</p>
+                  )}
+                </div>
+
+                {/* Business Type */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Primary Business Type *
+                  </label>
+                  <select
+                    value={formData.businessType}
+                    onChange={(e) => setFormData({ ...formData, businessType: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '13px',
+                      backgroundColor: '#FFFFFF',
+                      outline: 'none',
+                    }}
+                  >
+                    {BUSINESS_TYPES.map(bt => (
+                      <option key={bt} value={bt}>{bt}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Contact Email */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Contact Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="contact@yourstore.com"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${fieldErrors.email ? '#EF4444' : '#CBD5E1'}`,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  {fieldErrors.email && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.email}</p>
+                  )}
+                </div>
+
+                {/* Contact Phone */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Contact Phone *
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+1 (555) 234-5678"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${fieldErrors.phone ? '#EF4444' : '#CBD5E1'}`,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  {fieldErrors.phone && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.phone}</p>
+                  )}
+                </div>
+
+                {/* Business Address */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Business Address *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    placeholder="e.g. 420 Design Row, Portland, OR 97209"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: `1px solid ${fieldErrors.address ? '#EF4444' : '#CBD5E1'}`,
+                      fontSize: '13px',
+                      outline: 'none',
+                    }}
+                  />
+                  {fieldErrors.address && (
+                    <p style={{ margin: '4px 0 0', fontSize: '11px', color: '#DC2626' }}>{fieldErrors.address}</p>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>
+                    Store Headline & Bio (Optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Short summary of your brand story and product collection..."
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      fontFamily: 'inherit',
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: CATEGORIES */}
+          {step === 2 && (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <span className="eyebrow" style={{ color: '#059669' }}>Step 2 of 5</span>
+                <h2 style={{ fontSize: '26px', margin: '4px 0 8px', letterSpacing: '-0.03em' }}>
+                  Select store categories.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Choose which product categories your store sells, or add custom bespoke tags.
+                </p>
+              </div>
+
+              {categoryError && (
+                <div style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#991B1B',
+                  padding: '10px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <AlertCircle size={15} />
+                  <span>{categoryError}</span>
+                </div>
+              )}
+
+              {/* Predefined Category Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))',
+                gap: '10px',
+                marginBottom: '24px',
+              }}>
+                {PREDEFINED_CATEGORIES.map(cat => {
+                  const isSelected = formData.categories.includes(cat)
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => toggleCategory(cat)}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: '6px',
+                        border: `1px solid ${isSelected ? '#10B981' : '#E2E8F0'}`,
+                        backgroundColor: isSelected ? '#ECFDF5' : '#FFFFFF',
+                        color: isSelected ? '#065F46' : '#1E293B',
+                        fontWeight: isSelected ? 800 : 500,
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{cat}</span>
+                      {isSelected ? (
+                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#10B981', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Check size={11} />
+                        </div>
+                      ) : (
+                        <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: '1px solid #CBD5E1' }} />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Add Custom Category Input */}
+              <div style={{
+                backgroundColor: '#F8FAFC',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                padding: '16px',
+                marginBottom: '20px',
+              }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '8px' }}>
+                  Add Custom Category
+                </label>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleAddCustomCategory()
+                      }
+                    }}
+                    placeholder="e.g. Specialty Tea, Vintage Watches, Ceramic Art"
+                    style={{
+                      flex: 1,
+                      padding: '9px 12px',
+                      borderRadius: '6px',
+                      border: '1px solid #CBD5E1',
+                      fontSize: '12px',
+                      outline: 'none',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomCategory}
+                    className="button button-dark"
+                    style={{ padding: '9px 16px', fontSize: '11px' }}
+                  >
+                    <Plus size={14} /> Add Category
+                  </button>
+                </div>
+              </div>
+
+              {/* Selected Categories Summary */}
+              <div>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748B', display: 'block', marginBottom: '8px' }}>
+                  Selected Categories ({formData.categories.length}):
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {formData.categories.map(c => (
+                    <span
+                      key={c}
+                      style={{
+                        padding: '4px 10px',
+                        backgroundColor: '#101828',
+                        color: '#FFFFFF',
+                        borderRadius: '20px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      {c}
+                      <button
+                        type="button"
+                        onClick={() => toggleCategory(c)}
+                        style={{ background: 'none', border: 'none', color: '#94A3B8', cursor: 'pointer', padding: 0 }}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: PRODUCT SETUP */}
+          {step === 3 && (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <span className="eyebrow" style={{ color: '#059669' }}>Step 3 of 5</span>
+                <h2 style={{ fontSize: '26px', margin: '4px 0 8px', letterSpacing: '-0.03em' }}>
+                  Populate your initial product catalog.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Choose how your store's inventory should be configured at launch.
+                </p>
+              </div>
+
+              {fieldErrors.products && (
+                <div style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#991B1B',
+                  padding: '10px 14px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <AlertCircle size={15} />
+                  <span>{fieldErrors.products}</span>
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                {/* Option 1: Generate Sample Products */}
+                <div
+                  onClick={() => setFormData({ ...formData, productsOption: 'sample' })}
+                  style={{
+                    padding: '24px',
+                    borderRadius: '8px',
+                    border: `2px solid ${formData.productsOption === 'sample' ? '#10B981' : '#E2E8F0'}`,
+                    backgroundColor: formData.productsOption === 'sample' ? '#F0FDF4' : '#FFFFFF',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      backgroundColor: '#10B981',
+                      color: '#101828',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '14px',
+                    }}>
+                      <Sparkles size={18} />
+                    </div>
+                    <strong style={{ fontSize: '15px', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                      Generate Realistic Sample Products (Recommended)
+                    </strong>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                      Automatically generate high-quality product records matching your selected categories with real SKUs, photography, pricing, and inventory.
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '16px', fontSize: '11px', fontWeight: 800, color: '#059669' }}>
+                    {formData.productsOption === 'sample' ? '✓ Selected for launch' : 'Select option'}
+                  </div>
+                </div>
+
+                {/* Option 2: Import CSV / Excel File */}
+                <div
+                  onClick={() => setFormData({ ...formData, productsOption: 'csv' })}
+                  style={{
+                    padding: '24px',
+                    borderRadius: '8px',
+                    border: `2px solid ${formData.productsOption === 'csv' ? '#10B981' : '#E2E8F0'}`,
+                    backgroundColor: formData.productsOption === 'csv' ? '#F0FDF4' : '#FFFFFF',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <div>
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '8px',
+                      backgroundColor: '#101828',
+                      color: '#FFFFFF',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '14px',
+                    }}>
+                      <Upload size={18} />
+                    </div>
+                    <strong style={{ fontSize: '15px', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                      Import CSV / Spreadsheet
+                    </strong>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: 0, lineHeight: 1.5 }}>
+                      Upload an existing inventory spreadsheet containing product titles, prices, and stock counts.
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '16px', fontSize: '11px', fontWeight: 800, color: formData.productsOption === 'csv' ? '#059669' : '#64748B' }}>
+                    {formData.productsOption === 'csv' ? '✓ Selected for launch' : 'Select option'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Conditional CSV Upload UI */}
+              {formData.productsOption === 'csv' && (
+                <div style={{
+                  padding: '20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #CBD5E1',
+                  marginBottom: '16px',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block' }}>Upload Product Spreadsheet</strong>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>Requires headers: Title, Price, Inventory</span>
+                    </div>
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCsvUpload}
+                        style={{ display: 'none' }}
+                        id="csv-file-upload"
+                      />
+                      <label
+                        htmlFor="csv-file-upload"
+                        className="button button-dark"
+                        style={{ padding: '8px 14px', fontSize: '11px', cursor: 'pointer' }}
+                      >
+                        Choose .CSV File
+                      </label>
+                    </div>
+                  </div>
+
+                  {csvError && (
+                    <p style={{ fontSize: '11px', color: '#DC2626', margin: '8px 0 0' }}>{csvError}</p>
+                  )}
+
+                  {csvFile ? (
+                    <div style={{
+                      backgroundColor: '#FFFFFF',
+                      padding: '12px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid #E2E8F0',
+                      marginTop: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <FileText size={18} color="#059669" />
+                        <div>
+                          <strong style={{ fontSize: '12px', color: '#0F172A', display: 'block' }}>{csvFile.name}</strong>
+                          <span style={{ fontSize: '10px', color: '#059669' }}>
+                            ✓ {csvFile.count} products parsed and ready to import
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCsvFile(null)
+                          if (fileInputRef.current) fileInputRef.current.value = ''
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{
+                      padding: '16px',
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: '6px',
+                      border: '1px dashed #CBD5E1',
+                      textAlign: 'center',
+                      color: '#64748B',
+                      fontSize: '11px',
+                    }}>
+                      No spreadsheet attached yet. (Integration boundary: products will not be marked as imported until a file is selected).
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* STEP 4: THEME SELECTION */}
+          {step === 4 && (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <span className="eyebrow" style={{ color: '#059669' }}>Step 4 of 5</span>
+                <h2 style={{ fontSize: '26px', margin: '4px 0 8px', letterSpacing: '-0.03em' }}>
+                  Choose a brand starting point.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Select from four distinct aesthetic presets. You can fine-tune colors, fonts, and banners in the Theme Studio later.
+                </p>
+              </div>
+
+              {/* Theme Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '12px',
+                marginBottom: '28px',
+              }}>
+                {(Object.keys(THEME_PRESETS) as ThemePresetId[]).map((presetId) => {
+                  const t = THEME_PRESETS[presetId]
+                  const isSelected = formData.themePreset === presetId
+                  return (
+                    <div
+                      key={presetId}
+                      onClick={() => setFormData({ ...formData, themePreset: presetId })}
+                      style={{
+                        borderRadius: '8px',
+                        border: `2px solid ${isSelected ? '#10B981' : '#E2E8F0'}`,
+                        backgroundColor: '#FFFFFF',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 8px 20px -4px rgba(16, 185, 129, 0.2)' : 'none',
+                      }}
+                    >
+                      <div style={{
+                        height: '110px',
+                        backgroundImage: `url('${t.heroImage}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        position: 'relative',
+                        padding: '10px',
+                      }}>
+                        <div style={{
+                          backgroundColor: isSelected ? '#10B981' : 'rgba(0,0,0,0.6)',
+                          color: isSelected ? '#101828' : '#FFFFFF',
+                          padding: '3px 8px',
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          display: 'inline-block',
+                          textTransform: 'capitalize',
+                        }}>
+                          {presetId}
+                        </div>
+                      </div>
+                      <div style={{ padding: '12px' }}>
+                        <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block', textTransform: 'capitalize' }}>
+                          {t.name}
+                        </strong>
+                        <span style={{ fontSize: '10px', color: '#64748B', display: 'block', marginTop: '2px' }}>
+                          {t.type}
+                        </span>
+                        <div style={{ marginTop: '8px', display: 'flex', gap: '4px' }}>
+                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.bg, border: '1px solid #CBD5E1' }} />
+                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.accent }} />
+                          <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: t.ink }} />
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Live Preview Banner */}
+              <div style={{
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                overflow: 'hidden',
+                backgroundColor: activeThemeConfig.bg,
+                color: activeThemeConfig.ink,
+              }}>
+                <div style={{
+                  padding: '8px 16px',
+                  backgroundColor: activeThemeConfig.announcementBg,
+                  color: activeThemeConfig.announcementInk,
+                  fontSize: '10px',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                }}>
+                  {activeThemeConfig.heroBadge}
+                </div>
+                <div style={{
+                  padding: '36px 40px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '24px',
+                }}>
+                  <div>
+                    <span style={{
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      color: activeThemeConfig.accent,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.12em',
+                      display: 'block',
+                      marginBottom: '6px',
+                    }}>
+                      {formData.name || 'Your Store Name'}
+                    </span>
+                    <h3 style={{
+                      fontSize: '28px',
+                      margin: '0 0 10px',
+                      letterSpacing: '-0.03em',
+                      fontFamily: activeThemeConfig.fontHeadline,
+                      color: activeThemeConfig.ink,
+                    }}>
+                      {activeThemeConfig.heroHeadline} <em>{activeThemeConfig.heroHeadlineEm}</em>
+                    </h3>
+                    <p style={{
+                      fontSize: '12px',
+                      color: activeThemeConfig.inkMuted,
+                      margin: '0 0 16px',
+                      maxWidth: '460px',
+                      lineHeight: 1.6,
+                    }}>
+                      {formData.description || activeThemeConfig.heroSubtitle}
+                    </p>
+                    <button style={{
+                      backgroundColor: activeThemeConfig.accent,
+                      color: activeThemeConfig.accentForeground,
+                      padding: '9px 16px',
+                      borderRadius: activeThemeConfig.buttonRadius,
+                      border: 'none',
+                      fontSize: '11px',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                    }}>
+                      {activeThemeConfig.heroCta} →
+                    </button>
+                  </div>
+                  <div style={{
+                    width: '180px',
+                    height: '140px',
+                    borderRadius: activeThemeConfig.cardRadius,
+                    backgroundImage: `url('${activeThemeConfig.heroImage}')`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    border: `1px solid ${activeThemeConfig.border}`,
+                    flexShrink: 0,
+                  }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 5: REVIEW & LAUNCH */}
+          {step === 5 && (
+            <div>
+              <div style={{ marginBottom: '24px' }}>
+                <span className="eyebrow" style={{ color: '#059669' }}>Step 5 of 5</span>
+                <h2 style={{ fontSize: '26px', margin: '4px 0 8px', letterSpacing: '-0.03em' }}>
+                  Review and launch your store.
+                </h2>
+                <p style={{ fontSize: '13px', color: '#64748B', margin: 0 }}>
+                  Confirm your store configuration before publishing to the live server.
+                </p>
+              </div>
+
+              {launchError && (
+                <div style={{
+                  backgroundColor: '#FEF2F2',
+                  border: '1px solid #FECACA',
+                  color: '#991B1B',
+                  padding: '12px 16px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <AlertCircle size={16} />
+                  <span>{launchError}</span>
+                </div>
+              )}
+
+              {launchSuccess && (
+                <div style={{
+                  backgroundColor: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '14px 18px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                }}>
+                  <CheckCircle2 size={18} />
+                  <span>Store published successfully! Opening your Owner Dashboard...</span>
+                </div>
+              )}
+
+              {/* Summary Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '28px' }}>
+                
+                {/* Card 1: Business Details */}
+                <div style={{
+                  padding: '18px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '13px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Store size={14} color="#059669" /> Business Details
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      style={{ background: 'none', border: 'none', color: '#059669', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      <Edit2 size={11} /> Edit
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <div><span style={{ color: '#64748B' }}>Store Name:</span> <strong>{formData.name}</strong></div>
+                    <div><span style={{ color: '#64748B' }}>Owner:</span> {formData.ownerName}</div>
+                    <div><span style={{ color: '#64748B' }}>Email:</span> {formData.email}</div>
+                    <div><span style={{ color: '#64748B' }}>Phone:</span> {formData.phone}</div>
+                    <div><span style={{ color: '#64748B' }}>Type:</span> {formData.businessType}</div>
+                    <div><span style={{ color: '#64748B' }}>Address:</span> {formData.address}</div>
+                    {formData.logoUrl && (
+                      <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: '#64748B' }}>Logo:</span>
+                        <img src={formData.logoUrl} alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '4px', border: '1px solid #CBD5E1' }} />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card 2: Categories & Products */}
+                <div style={{
+                  padding: '18px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <strong style={{ fontSize: '13px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Package size={14} color="#0284C7" /> Catalog & Inventory
+                    </strong>
+                    <button
+                      type="button"
+                      onClick={() => setStep(2)}
+                      style={{ background: 'none', border: 'none', color: '#059669', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                    >
+                      <Edit2 size={11} /> Edit
+                    </button>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div>
+                      <span style={{ color: '#64748B', display: 'block', marginBottom: '4px' }}>Categories:</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {formData.categories.map(c => (
+                          <span key={c} style={{ padding: '2px 8px', backgroundColor: '#E2E8F0', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '8px' }}>
+                      <span style={{ color: '#64748B' }}>Setup Method:</span>{' '}
+                      <strong>
+                        {formData.productsOption === 'sample' ? 'Auto-Generate Sample Products' : formData.productsOption === 'csv' ? `Imported CSV (${csvFile?.count || 0} items)` : 'Manual / Empty Catalog'}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card 3: Theme Preset */}
+                <div style={{
+                  gridColumn: '1 / -1',
+                  padding: '18px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderRadius: '8px',
+                  border: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '8px',
+                      backgroundColor: activeThemeConfig.accent,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFFFFF',
+                    }}>
+                      <Palette size={20} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block', textTransform: 'capitalize' }}>
+                        Active Theme: {activeThemeConfig.name} ({formData.themePreset})
+                      </strong>
+                      <span style={{ fontSize: '11px', color: '#64748B' }}>
+                        {activeThemeConfig.type} • {activeThemeConfig.fontHeadline}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    style={{ background: 'none', border: 'none', color: '#059669', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}
+                  >
+                    <Edit2 size={11} /> Change Theme
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Footer Controls */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginTop: '28px',
+            paddingTop: '20px',
+            borderTop: '1px solid #E2E8F0',
+          }}>
+            <div>
+              {step > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  className="button button-light"
+                  style={{ border: '1px solid #CBD5E1', fontSize: '12px' }}
+                >
+                  <ArrowLeft size={14} /> Back
+                </button>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {step < 5 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="button button-green"
+                  style={{ fontSize: '12px', padding: '12px 20px' }}
+                >
+                  Continue <ArrowRight size={14} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleLaunch}
+                  disabled={isLaunching}
+                  className="button button-green"
+                  style={{
+                    fontSize: '13px',
+                    padding: '13px 26px',
+                    fontWeight: 800,
+                    cursor: isLaunching ? 'not-allowed' : 'pointer',
+                    opacity: isLaunching ? 0.8 : 1,
+                  }}
+                >
+                  {isLaunching ? 'Publishing Store to Live Server...' : 'Launch Store & Open Dashboard'}
+                  <Rocket size={15} style={{ marginLeft: '6px' }} />
+                </button>
+              )}
+            </div>
           </div>
-        </main>
-      </div>
+
+        </div>
+
+      </main>
     </div>
   )
 }

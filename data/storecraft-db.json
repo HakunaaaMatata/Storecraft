@@ -1,6 +1,284 @@
 {
   "stores": [
     {
+      "id": "store-solarium-ceramics-3849-2-mv19uen4",
+      "slug": "solarium-ceramics-3849-2",
+      "name": "Solarium Ceramics 3849",
+      "tagline": "Second branch.",
+      "announcement": "AUTUMN / WINTER 2026",
+      "preset": "atelier",
+      "categories": [
+        "All",
+        "Home and Living"
+      ],
+      "heroHeadline": "Tailored with intent.",
+      "heroHeadlineEm": "Crafted forever.",
+      "heroSubtitle": "Second branch.",
+      "heroImage": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "solarium-ceramics-3849-2-p1",
+          "sku": "SKU-SOL-101",
+          "title": "Forma Desk Lamp",
+          "subtitle": "Cast aluminum adjustable task light",
+          "category": "Home and Living",
+          "price": 148,
+          "compareAtPrice": 178,
+          "inventory": 14,
+          "lowStockThreshold": 5,
+          "description": "Cast aluminum task light with balanced counterweight pivot and touch dimming.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-2-p2",
+          "sku": "SKU-SOL-102",
+          "title": "Hand-thrown Ceramic Mug",
+          "subtitle": "Raw volcanic clay with satin interior",
+          "category": "Home and Living",
+          "price": 34,
+          "compareAtPrice": 41,
+          "inventory": 4,
+          "lowStockThreshold": 5,
+          "description": "Studio handcrafted stoneware mug made in small kiln batches.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-2-p3",
+          "sku": "SKU-SOL-103",
+          "title": "Heavy Woven Linen Throw",
+          "subtitle": "100% Normandy flax washed linen",
+          "category": "Home and Living",
+          "price": 120,
+          "compareAtPrice": 144,
+          "inventory": 9,
+          "lowStockThreshold": 5,
+          "description": "Textured soft linen blanket that grows softer with every wash.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        }
+      ],
+      "ownerId": "user-1791568863164-zrbqs",
+      "ownerName": "Elena Rostova",
+      "ownerEmail": "tester_1791568862141@storecraft.test",
+      "phone": "+1 555-019-2834",
+      "address": "742 Evergreen Terrace, Suite 400",
+      "businessType": "Home and Living",
+      "description": "Second branch.",
+      "createdAt": "2026-10-09T18:01:03.904Z"
+    },
+    {
+      "id": "store-solarium-ceramics-3849-mv19uelw",
+      "slug": "solarium-ceramics-3849",
+      "name": "Solarium Ceramics 3849",
+      "tagline": "Artisanal stoneware and terracotta objects made for slow living.",
+      "announcement": "AUTUMN / WINTER 2026",
+      "preset": "atelier",
+      "categories": [
+        "All",
+        "Home and Living",
+        "Handcrafted Ceramics",
+        "Kitchenware"
+      ],
+      "heroHeadline": "Tailored with intent.",
+      "heroHeadlineEm": "Crafted forever.",
+      "heroSubtitle": "Artisanal stoneware and terracotta objects made for slow living.",
+      "heroImage": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "solarium-ceramics-3849-p1",
+          "sku": "SKU-SOL-101",
+          "title": "Forma Desk Lamp",
+          "subtitle": "Cast aluminum adjustable task light",
+          "category": "Home and Living",
+          "price": 148,
+          "compareAtPrice": 178,
+          "inventory": 14,
+          "lowStockThreshold": 5,
+          "description": "Cast aluminum task light with balanced counterweight pivot and touch dimming.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-p2",
+          "sku": "SKU-SOL-102",
+          "title": "Hand-thrown Ceramic Mug",
+          "subtitle": "Raw volcanic clay with satin interior",
+          "category": "Home and Living",
+          "price": 34,
+          "compareAtPrice": 41,
+          "inventory": 4,
+          "lowStockThreshold": 5,
+          "description": "Studio handcrafted stoneware mug made in small kiln batches.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-p3",
+          "sku": "SKU-SOL-103",
+          "title": "Heavy Woven Linen Throw",
+          "subtitle": "100% Normandy flax washed linen",
+          "category": "Home and Living",
+          "price": 120,
+          "compareAtPrice": 144,
+          "inventory": 9,
+          "lowStockThreshold": 5,
+          "description": "Textured soft linen blanket that grows softer with every wash.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-p4",
+          "sku": "SKU-SOL-104",
+          "title": "Artisanal Studio Candle",
+          "subtitle": "Coconut wax with amber and cedarwood",
+          "category": "Handcrafted Ceramics",
+          "price": 32,
+          "compareAtPrice": 38,
+          "inventory": 15,
+          "lowStockThreshold": 5,
+          "description": "Hand-poured candle in reusable amber apothecary glass vessel.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        },
+        {
+          "id": "solarium-ceramics-3849-p5",
+          "sku": "SKU-SOL-105",
+          "title": "Artisanal Studio Candle",
+          "subtitle": "Coconut wax with amber and cedarwood",
+          "category": "Kitchenware",
+          "price": 32,
+          "compareAtPrice": 38,
+          "inventory": 15,
+          "lowStockThreshold": 5,
+          "description": "Hand-poured candle in reusable amber apothecary glass vessel.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        }
+      ],
+      "ownerId": "user-1791568863164-zrbqs",
+      "ownerName": "Elena Rostova",
+      "ownerEmail": "tester_1791568862141@storecraft.test",
+      "phone": "+1 555-019-2834",
+      "address": "742 Evergreen Terrace, Suite 400",
+      "businessType": "Home and Living",
+      "description": "Artisanal stoneware and terracotta objects made for slow living.",
+      "createdAt": "2026-10-09T18:01:03.860Z"
+    },
+    {
       "id": "store-forma",
       "slug": "forma",
       "name": "Forma Living",
@@ -275,7 +553,10 @@
             ]
           }
         }
-      ]
+      ],
+      "ownerId": "user-demo-jamie-davis",
+      "ownerName": "Jamie Davis",
+      "ownerEmail": "demo@storecraft.com"
     },
     {
       "id": "store-atelier",
@@ -465,7 +746,10 @@
             ]
           }
         }
-      ]
+      ],
+      "ownerId": "user-demo-jamie-davis",
+      "ownerName": "Jamie Davis",
+      "ownerEmail": "demo@storecraft.com"
     },
     {
       "id": "store-market",
@@ -640,7 +924,10 @@
             ]
           }
         }
-      ]
+      ],
+      "ownerId": "user-demo-jamie-davis",
+      "ownerName": "Jamie Davis",
+      "ownerEmail": "demo@storecraft.com"
     },
     {
       "id": "store-circuit",
@@ -829,7 +1116,10 @@
             ]
           }
         }
-      ]
+      ],
+      "ownerId": "user-demo-jamie-davis",
+      "ownerName": "Jamie Davis",
+      "ownerEmail": "demo@storecraft.com"
     }
   ],
   "orders": [
@@ -870,6 +1160,30 @@
       "shipping": 0,
       "total": 159.84,
       "status": "PAID"
+    }
+  ],
+  "users": [
+    {
+      "id": "user-demo-jamie-davis",
+      "name": "Jamie Davis",
+      "email": "demo@storecraft.com",
+      "passwordHash": "4c99de07bfb04d6b05259fe8d3ca9f463f67d3210580b2a9a2afd4533bd3f0c10ae5d03d59a827a8736c25b2b96268c27a4295c1b766b119f61016afd603e1c9",
+      "salt": "demo-salt-storecraft-2026",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ],
+  "sessions": [
+    {
+      "token": "bf30b9aadbe300c55b133b74afd033e8cd2359002f2d804b1e92cdec6b7a391c",
+      "userId": "user-demo-jamie-davis",
+      "expiresAt": "2026-10-16T18:06:53.391Z",
+      "createdAt": "2026-10-09T18:06:53.391Z"
+    },
+    {
+      "token": "bd7af1c29c2191eb85f6dcf1bc5eb62baa91af30124a2813fc902bf61e98d139",
+      "userId": "user-demo-jamie-davis",
+      "expiresAt": "2026-10-16T18:09:53.153Z",
+      "createdAt": "2026-10-09T18:09:53.153Z"
     }
   ]
 }
