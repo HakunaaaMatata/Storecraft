@@ -14,6 +14,7 @@ interface StoreHeaderProps {
   onSearchChange: (query: string) => void
   activeCategory: string
   onCategorySelect: (category: string) => void
+  showAnnouncement?: boolean
 }
 
 export function StoreHeader({
@@ -25,15 +26,18 @@ export function StoreHeader({
   searchQuery,
   onSearchChange,
   activeCategory,
-  onCategorySelect
+  onCategorySelect,
+  showAnnouncement = true
 }: StoreHeaderProps) {
-  const [showAnnouncement, setShowAnnouncement] = useState(true)
+  const [isAnnouncementVisible, setIsAnnouncementVisible] = useState(true)
+  
+  const isActuallyShowingAnnouncement = showAnnouncement && isAnnouncementVisible && !!store.announcement;
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   return (
     <header className="sticky top-8 z-40 w-full transition-colors duration-300">
       {/* 1. Announcement Banner */}
-      {showAnnouncement && store.announcement && (
+      {isActuallyShowingAnnouncement && (
         <div
           className="relative px-4 py-2 text-center text-xs font-medium tracking-wide transition-colors"
           style={{
@@ -47,7 +51,7 @@ export function StoreHeader({
             <p className="truncate text-[11px] sm:text-xs">{store.announcement}</p>
           </div>
           <button
-            onClick={() => setShowAnnouncement(false)}
+            onClick={() => setIsAnnouncementVisible(false)}
             className="absolute right-3 top-1/2 -translate-y-1/2 p-1 opacity-70 hover:opacity-100"
             aria-label="Dismiss announcement"
           >

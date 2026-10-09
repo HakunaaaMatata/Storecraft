@@ -266,29 +266,6 @@ export default function ProductsPage() {
     }
   }
 
-  // Sample Generator Calculation & Handler
-  const sampleSummary = useMemo(() => {
-    return getSampleProductsSummary(activeStore?.categories || ['Home & Living'])
-  }, [activeStore?.categories])
-
-  const handleGenerateSamples = () => {
-    if (!activeStore || isGeneratingSamples) return
-    setIsGeneratingSamples(true)
-    setSampleSuccessToast(null)
-
-    const existingSkus = new Set(products.map((p) => p.sku?.toUpperCase()).filter(Boolean))
-    const sampleProds = getSampleProductsForCategories(
-      activeStore.categories || ['Home & Living'],
-      activeStore.id,
-      existingSkus
-    )
-
-    actions.importProducts(sampleProds)
-    setIsGeneratingSamples(false)
-    setIsSampleModalOpen(false)
-    setSampleSuccessToast(`Successfully added ${sampleProds.length} realistic sample products to ${activeStore.name}!`)
-  }
-
   const inputStyle = (hasError: boolean) => ({
     width: '100%', padding: '8px 12px', border: `1px solid ${hasError ? '#EF4444' : 'var(--line)'}`,
     borderRadius: '4px', fontSize: '12px', backgroundColor: '#FFFFFF', color: 'var(--navy)', outline: 'none'

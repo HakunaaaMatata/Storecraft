@@ -1,5 +1,5 @@
-import { ThemeConfig, ThemePresetId } from './types'
-export type { ThemeConfig, ThemePresetId }
+import { ThemeConfig, ThemePresetId, CustomThemeSettings } from './types'
+export type { ThemeConfig, ThemePresetId, CustomThemeSettings }
 
 export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
   atelier: {
@@ -29,7 +29,15 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     heroCta: 'Explore Collection',
     cardRadius: '4px',
     buttonRadius: '3px',
-    tagStyle: 'uppercase tracking-widest font-serif italic text-xs'
+    tagStyle: 'uppercase tracking-widest font-serif italic text-xs',
+    headerVariant: 'centered',
+    productCardVariant: 'editorial',
+    heroLayout: 'split',
+    containerWidth: 'max-w-6xl',
+    buttonStyle: 'sharp',
+    priceStyle: 'serif-italic',
+    badgeStyle: 'square',
+    footerStyle: 'editorial'
   },
   market: {
     id: 'market',
@@ -58,7 +66,15 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     heroCta: 'Shop Fresh Harvest',
     cardRadius: '12px',
     buttonRadius: '8px',
-    tagStyle: 'font-semibold tracking-wide text-xs'
+    tagStyle: 'font-semibold tracking-wide text-xs',
+    headerVariant: 'full',
+    productCardVariant: 'compact',
+    heroLayout: 'banner',
+    containerWidth: 'max-w-7xl',
+    buttonStyle: 'rounded',
+    priceStyle: 'classic',
+    badgeStyle: 'pill',
+    footerStyle: 'grid'
   },
   forma: {
     id: 'forma',
@@ -87,7 +103,15 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     heroCta: 'View Curated Living',
     cardRadius: '6px',
     buttonRadius: '4px',
-    tagStyle: 'font-medium tracking-normal text-xs'
+    tagStyle: 'font-medium tracking-normal text-xs',
+    headerVariant: 'minimal',
+    productCardVariant: 'minimal',
+    heroLayout: 'immersive',
+    containerWidth: 'max-w-6xl',
+    buttonStyle: 'pill',
+    priceStyle: 'classic',
+    badgeStyle: 'subtle',
+    footerStyle: 'clean'
   },
   circuit: {
     id: 'circuit',
@@ -116,6 +140,34 @@ export const THEME_PRESETS: Record<ThemePresetId, ThemeConfig> = {
     heroCta: 'Explore Hardware',
     cardRadius: '10px',
     buttonRadius: '6px',
-    tagStyle: 'font-mono uppercase tracking-wider text-xs'
+    tagStyle: 'font-mono uppercase tracking-wider text-xs',
+    headerVariant: 'bordered',
+    productCardVariant: 'glass',
+    heroLayout: 'split',
+    containerWidth: 'max-w-screen-2xl',
+    buttonStyle: 'outline',
+    priceStyle: 'mono',
+    badgeStyle: 'glow',
+    footerStyle: 'dark'
+  }
+}
+
+export function resolveTheme(presetId: ThemePresetId, custom?: CustomThemeSettings): ThemeConfig {
+  const baseTheme = THEME_PRESETS[presetId] || THEME_PRESETS['atelier']
+  if (!custom) return baseTheme
+
+  return {
+    ...baseTheme,
+    fontHeadline: custom.fontHeadline || baseTheme.fontHeadline,
+    fontBody: custom.fontBody || baseTheme.fontBody,
+    bg: custom.bgColor || baseTheme.bg,
+    surface: custom.surfaceColor || baseTheme.surface,
+    accent: custom.accentColor || baseTheme.accent,
+    ink: custom.primaryColor || baseTheme.ink,
+    heroImage: custom.heroImage || baseTheme.heroImage,
+    heroHeadline: custom.heroHeadline || baseTheme.heroHeadline,
+    heroHeadlineEm: custom.heroHeadlineEm || baseTheme.heroHeadlineEm,
+    heroSubtitle: custom.heroSubtitle || baseTheme.heroSubtitle,
+    heroCta: custom.heroCta || baseTheme.heroCta
   }
 }

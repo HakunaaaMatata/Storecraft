@@ -118,12 +118,14 @@ export function getStoreBySlug(slug: string): Store | null {
   return null
 }
 
-export function updateStorePreset(slug: string, preset: ThemePresetId): Store | null {
+export function updateStoreSettings(slug: string, updates: Partial<Store>): Store | null {
   const db = ensureDbFile()
   const store = db.stores.find((s) => s.slug.toLowerCase() === slug.toLowerCase())
   if (!store) return null
 
-  store.preset = preset
+  Object.assign(store, updates)
+  
+  // Ensure we also save to memoryDB in case ensureDbFile is called again before persistence
   persistDb(db)
   return store
 }

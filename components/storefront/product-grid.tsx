@@ -14,6 +14,7 @@ interface ProductGridProps {
   onSearchChange: (query: string) => void
   onSelectProduct: (product: Product) => void
   onInstantAddToCart: (product: Product) => void
+  showCategories?: boolean
 }
 
 export function ProductGrid({
@@ -25,7 +26,8 @@ export function ProductGrid({
   searchQuery,
   onSearchChange,
   onSelectProduct,
-  onInstantAddToCart
+  onInstantAddToCart,
+  showCategories = true
 }: ProductGridProps) {
   const [addedProductId, setAddedProductId] = useState<string | null>(null)
 
@@ -122,46 +124,48 @@ export function ProductGrid({
         </div>
 
         {/* Category Filter Pills */}
-        <div className="mb-8 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
-          {categories.map((category) => {
-            const count =
-              category === 'All'
-                ? products.length
-                : products.filter((p) => p.category.toLowerCase() === category.toLowerCase()).length
+        {showCategories && (
+          <div className="mb-8 flex flex-wrap items-center gap-2 overflow-x-auto pb-2">
+            {categories.map((category) => {
+              const count =
+                category === 'All'
+                  ? products.length
+                  : products.filter((p) => p.category.toLowerCase() === category.toLowerCase()).length
 
-            const isActive = activeCategory === category
+              const isActive = activeCategory === category
 
-            return (
-              <button
-                key={category}
-                onClick={() => onCategorySelect(category)}
-                className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                  isActive
-                    ? 'shadow-sm ring-1 ring-inset ring-black/10'
-                    : 'border hover:opacity-100'
-                }`}
-                style={{
-                  backgroundColor: isActive ? theme.accent : theme.surface,
-                  color: isActive ? theme.accentForeground : theme.ink,
-                  borderColor: theme.border
-                }}
-              >
-                <span>{category}</span>
-                <span
-                  className="rounded-full px-1.5 py-0.2 text-[10px] font-bold"
+              return (
+                <button
+                  key={category}
+                  onClick={() => onCategorySelect(category)}
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
+                    isActive
+                      ? 'shadow-sm ring-1 ring-inset ring-black/10'
+                      : 'border hover:opacity-100'
+                  }`}
                   style={{
-                    backgroundColor: isActive
-                      ? 'rgba(255, 255, 255, 0.25)'
-                      : theme.surfaceSubtle,
-                    color: isActive ? theme.accentForeground : theme.inkMuted
+                    backgroundColor: isActive ? theme.accent : theme.surface,
+                    color: isActive ? theme.accentForeground : theme.ink,
+                    borderColor: theme.border
                   }}
                 >
-                  {count}
-                </span>
-              </button>
-            )
-          })}
-        </div>
+                  <span>{category}</span>
+                  <span
+                    className="rounded-full px-1.5 py-0.2 text-[10px] font-bold"
+                    style={{
+                      backgroundColor: isActive
+                        ? 'rgba(255, 255, 255, 0.25)'
+                        : theme.surfaceSubtle,
+                      color: isActive ? theme.accentForeground : theme.inkMuted
+                    }}
+                  >
+                    {count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Results Info */}
         <div className="mb-6 flex items-center justify-between text-xs" style={{ color: theme.inkMuted }}>

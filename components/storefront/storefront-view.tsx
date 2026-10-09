@@ -1,6 +1,6 @@
 'use client'
 
-import { THEME_PRESETS } from '@/lib/theme-presets'
+import { THEME_PRESETS, resolveTheme } from '@/lib/theme-presets'
 import { CartItem, Order, Product, Store, ThemePresetId } from '@/lib/types'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
@@ -37,7 +37,7 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
   // Store and Theme Preset state
   const [store, setStore] = useState<Store>(initialStore)
   const [currentPreset, setCurrentPreset] = useState<ThemePresetId>(initialStore.preset)
-  const theme = THEME_PRESETS[currentPreset] || THEME_PRESETS.forma
+  const theme = resolveTheme(currentPreset, store.themeSettings)
 
   // Filters & Search
   const initialCategory = searchParams.get('category') || 'All'
@@ -325,6 +325,17 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
 
+  const defaultSections = [
+    { id: 'announcement', name: 'Announcement Bar', enabled: true },
+    { id: 'hero', name: 'Hero Banner', enabled: true },
+    { id: 'categories', name: 'Categories', enabled: true },
+    { id: 'catalog', name: 'Product Catalog', enabled: true },
+    { id: 'footer', name: 'Footer', enabled: true }
+  ];
+  
+  const activeSections = store.themeSettings?.sections || defaultSections;
+  const isSectionEnabled = (id: string) => activeSections.find(s => s.id === id)?.enabled !== false;
+
   return (
     <div
       className="min-h-screen transition-colors duration-300"
@@ -342,7 +353,9 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
         onResetDb={handleResetDb}
       />
 
-      {/* 2. Store Announcement & Header */}
+      {/* Render sections based on activeSections order, but here we just toggle them since they are complex components */}
+      
+      {/* 2. Store Announcement & Header (Always render Header, conditionally render announcement via themeSettings) */}
       <StoreHeader
         store={store}
         theme={theme}
@@ -353,27 +366,33 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
         onSearchChange={handleSearchChange}
         activeCategory={activeCategory}
         onCategorySelect={handleCategorySelect}
+        showAnnouncement={isSectionEnabled('announcement')}
       />
 
       {/* 3. Hero Visuals */}
-      <StoreHero
-        store={store}
-        theme={theme}
-        onScrollToCatalog={handleScrollToCatalog}
-      />
+      {isSectionEnabled('hero') && (
+        <StoreHero
+          store={store}
+          theme={theme}
+          onScrollToCatalog={handleScrollToCatalog}
+        />
+      )}
 
       {/* 4. Product Catalog Grid */}
-      <ProductGrid
-        products={store.products}
-        theme={theme}
-        categories={store.categories}
-        activeCategory={activeCategory}
-        onCategorySelect={handleCategorySelect}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchChange}
-        onSelectProduct={handleSelectProduct}
-        onInstantAddToCart={handleInstantAddToCart}
-      />
+      {isSectionEnabled('catalog') && (
+        <ProductGrid
+          products={store.products}
+          theme={theme}
+          categories={store.categories}
+          activeCategory={activeCategory}
+          onCategorySelect={handleCategorySelect}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          onSelectProduct={handleSelectProduct}
+          onInstantAddToCart={handleInstantAddToCart}
+          showCategories={isSectionEnabled('categories')}
+        />
+      )}
 
       {/* 5. Product Detail Drawer / Modal */}
       <ProductDrawer
@@ -409,52 +428,54 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
       />
 
       {/* Storefront Footer */}
-      <footer
-        className="border-t py-12 px-4 transition-colors sm:px-6"
-        style={{
-          backgroundColor: theme.surface,
-          borderColor: theme.border,
-          color: theme.ink
-        }}
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            <div className="flex items-center gap-3">
-              <span
-                className="flex h-7 w-7 items-center justify-center text-xs font-black"
-                style={{
-                  backgroundColor: theme.accent,
-                  color: theme.accentForeground,
-                  borderRadius: theme.buttonRadius
-                }}
-              >
-                {store.name.charAt(0)}
-              </span>
-              <div>
-                <strong className="text-sm font-bold">{store.name}</strong>
-                <p className="text-xs" style={{ color: theme.inkMuted }}>
-                  {store.tagline}
-                </p>
+      {isSectionEnabled('footer') && (
+        <footer
+          className="border-t py-12 px-4 transition-colors sm:px-6"
+          style={{
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+            color: theme.ink
+          }}
+        >
+          <div className="mx-auto max-w-7xl">
+            <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex h-7 w-7 items-center justify-center text-xs font-black"
+                  style={{
+                    backgroundColor: theme.accent,
+                    color: theme.accentForeground,
+                    borderRadius: theme.buttonRadius
+                  }}
+                >
+                  {store.name.charAt(0)}
+                </span>
+                <div>
+                  <strong className="text-sm font-bold">{store.name}</strong>
+                  <p className="text-xs" style={{ color: theme.inkMuted }}>
+                    {store.tagline}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-6 text-xs" style={{ color: theme.inkMuted }}>
+                <span className="font-semibold uppercase tracking-wider">
+                  Preset: <strong>{theme.name}</strong>
+                </span>
+                <span>•</span>
+                <span>Powered by StoreCraft Engine</span>
               </div>
             </div>
 
-            <div className="flex items-center gap-6 text-xs" style={{ color: theme.inkMuted }}>
-              <span className="font-semibold uppercase tracking-wider">
-                Preset: <strong>{theme.name}</strong>
-              </span>
-              <span>·</span>
-              <span>Powered by StoreCraft Engine</span>
+            <div
+              className="mt-8 border-t pt-6 text-center text-[11px]"
+              style={{ borderColor: theme.border, color: theme.inkMuted }}
+            >
+              © {new Date().getFullYear()} {store.name}. All rights reserved. Demo storefront environment.
             </div>
           </div>
-
-          <div
-            className="mt-8 border-t pt-6 text-center text-[11px]"
-            style={{ borderColor: theme.border, color: theme.inkMuted }}
-          >
-            © {new Date().getFullYear()} {store.name}. All rights reserved. Demo storefront environment.
-          </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   )
 }

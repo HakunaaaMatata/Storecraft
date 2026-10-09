@@ -28,6 +28,44 @@ export interface ThemeConfig {
   cardRadius: string
   buttonRadius: string
   tagStyle: string
+  headerVariant: 'centered' | 'full' | 'minimal' | 'bordered'
+  productCardVariant: 'editorial' | 'compact' | 'minimal' | 'glass'
+  heroLayout: 'split' | 'banner' | 'immersive'
+  containerWidth: 'max-w-6xl' | 'max-w-7xl' | 'max-w-screen-2xl'
+  buttonStyle: 'sharp' | 'pill' | 'rounded' | 'outline'
+  priceStyle: 'serif-italic' | 'bold-emerald' | 'mono' | 'classic'
+  badgeStyle: 'pill' | 'square' | 'subtle' | 'glow'
+  footerStyle: 'editorial' | 'grid' | 'clean' | 'dark'
+}
+
+export type StoreSectionId = 'announcement' | 'hero' | 'categories' | 'catalog' | 'features' | 'footer'
+
+export interface StoreSection {
+  id: StoreSectionId
+  name: string
+  enabled: boolean
+}
+
+export interface CustomThemeSettings {
+  preset: ThemePresetId
+  primaryColor?: string
+  accentColor?: string
+  bgColor?: string
+  surfaceColor?: string
+  fontHeadline?: string
+  fontBody?: string
+  logoUrl?: string
+  heroImage?: string
+  heroHeadline?: string
+  heroHeadlineEm?: string
+  heroSubtitle?: string
+  heroCta?: string
+  announcement?: string
+  announcementEnabled?: boolean
+  footerText?: string
+  contactEmail?: string
+  sections?: StoreSection[]
+  updatedAt?: string
 }
 
 export interface ProductVariant {
@@ -40,6 +78,7 @@ export interface Product {
   id: string
   sku: string
   title: string
+  name?: string
   subtitle: string
   category: string
   price: number
@@ -81,6 +120,12 @@ export interface Store {
   heroHeadlineEm: string
   heroSubtitle: string
   heroImage: string
+  logoUrl?: string
+  contactEmail?: string
+  footerText?: string
+  sections?: StoreSection[]
+  themeSettings?: CustomThemeSettings
+  draftThemeSettings?: CustomThemeSettings
   products: Product[]
   ownerId?: string
   ownerName?: string
@@ -89,7 +134,6 @@ export interface Store {
   address?: string
   businessType?: string
   description?: string
-  logoUrl?: string
   createdAt?: string
 }
 
@@ -146,5 +190,6 @@ export interface Order {
   tax: number
   shipping: number
   total: number
-  status: 'PAID' | 'PROCESSING' | 'SHIPPED'
+  status: 'PAID' | 'PROCESSING' | 'SHIPPED' | string
+  statusHistory?: { status: string; timestamp: string; note?: string }[]
 }
