@@ -31,13 +31,24 @@ export async function PATCH(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
-  const body = await request.json()
-  const { action, settings } = body
+  
+  const session = await getSessionUser()
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
   const currentStore = getStoreBySlug(slug)
   if (!currentStore) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
+
+  // Authorize owner
+  if (currentStore.ownerId !== session.user.id && currentStore.ownerEmail?.toLowerCase() !== session.user.email.toLowerCase()) {
+    return NextResponse.json({ error: 'Forbidden: You do not have permission to modify this store' }, { status: 403 })
+  }
+
+  const body = await request.json()
+  const { action, settings } = body
 
   let updates: Partial<Store> = {}
 
@@ -57,7 +68,7 @@ export async function PATCH(
         updatedAt: new Date().toISOString()
       },
       draftThemeSettings: undefined,
-      preset: settings.preset || currentStore.draftThemeSettings?.preset || currentStore.preset
+      preset: settings?.preset || currentStore.draftThemeSettings?.preset || currentStore.preset
     }
   } else if (action === 'reset_theme') {
     updates = {
@@ -72,7 +83,6 @@ export async function PATCH(
   }
 
   const updated = updateStoreSettings(slug, updates)
-  
   if (!updated) {
     return NextResponse.json({ error: 'Failed to update store' }, { status: 500 })
   }
