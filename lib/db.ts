@@ -148,14 +148,22 @@ export interface CreateOrderParams {
   customer: ShippingAddress
   paymentMethod: string
   items: CartItem[]
+  idempotencyKey?: string
 }
+
+const idempotencyCache = new Map<string, Order>()
 
 export function createOrder({
   storeSlug,
   customer,
   paymentMethod,
-  items
+  items,
+  idempotencyKey
 }: CreateOrderParams): { success: boolean; order?: Order; error?: string } {
+  if (idempotencyKey && idempotencyCache.has(idempotencyKey)) {
+    return { success: true, order: idempotencyCache.get(idempotencyKey) }
+  }
+
   const db = ensureDbFile()
   const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
     || db.stores[0] // fallback if dynamic slug
@@ -168,7 +176,9 @@ export function createOrder({
     return { success: false, error: 'Cart is empty' }
   }
 
-  // 1. Check stock availability for all products
+  // 1. Check stock availability for all products and construct server-validated items
+  const validatedItems: OrderItem[] = []
+  
   for (const item of items) {
     const product = store.products.find((p) => p.id === item.productId)
     if (!product) {
@@ -180,6 +190,22 @@ export function createOrder({
         error: `Insufficient stock for "${item.title}". Only ${product.inventory} available.`
       }
     }
+    
+    // Create a validated item using the server's price
+    validatedItems.push({
+      productId: item.productId,
+      sku: product.sku || item.sku,
+      title: product.name || product.title || item.title,
+      image: item.image,
+      quantity: item.quantity,
+      unitPrice: product.price,
+      totalPrice: product.price * item.quantity,
+      selectedVariants: {
+        size: item.selectedSize,
+        color: item.selectedColor,
+        finish: item.selectedFinish
+      }
+    })
   }
 
   // 2. Decrement inventory in the database
@@ -188,12 +214,8 @@ export function createOrder({
     product.inventory = Math.max(0, product.inventory - item.quantity)
   }
 
-  // 3. Calculate order financials using SERVER-SIDE PRICES
-  const subtotal = items.reduce((sum, item) => {
-    const product = store.products.find((p) => p.id === item.productId)!
-    return sum + product.price * item.quantity
-  }, 0)
-  
+  // 3. Calculate order financials server-side
+  const subtotal = validatedItems.reduce((sum, item) => sum + item.totalPrice, 0)
   const tax = Math.round(subtotal * 0.08 * 100) / 100
   const shipping = subtotal >= 100 ? 0 : 10
   const total = Math.round((subtotal + tax + shipping) * 100) / 100
@@ -207,23 +229,7 @@ export function createOrder({
     createdAt: new Date().toISOString(),
     customer,
     paymentMethod: paymentMethod || 'Demo Card (Instant Auth)',
-    items: items.map((item): OrderItem => {
-      const product = store.products.find((p) => p.id === item.productId)!
-      return {
-        productId: item.productId,
-        sku: item.sku,
-        title: item.title,
-        image: item.image,
-        quantity: item.quantity,
-        unitPrice: product.price, // use server price
-        totalPrice: product.price * item.quantity,
-        selectedVariants: {
-          size: item.selectedSize,
-          color: item.selectedColor,
-          finish: item.selectedFinish
-        }
-      }
-    }),
+    items: validatedItems,
     subtotal,
     tax,
     shipping,
@@ -233,6 +239,15 @@ export function createOrder({
 
   db.orders.unshift(newOrder)
   persistDb(db)
+
+  if (idempotencyKey) {
+    idempotencyCache.set(idempotencyKey, newOrder)
+    // Keep cache from growing indefinitely (optional for a hackathon, but good practice)
+    if (idempotencyCache.size > 1000) {
+      const firstKey = idempotencyCache.keys().next().value
+      if (firstKey) idempotencyCache.delete(firstKey)
+    }
+  }
 
   return { success: true, order: newOrder }
 }

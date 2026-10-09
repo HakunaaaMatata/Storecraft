@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { storeSlug, customer, paymentMethod, items } = body
+    const { storeSlug, customer, paymentMethod, items, idempotencyKey } = body
 
     if (!storeSlug || !customer || !items || !items.length) {
       return NextResponse.json(
@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
       storeSlug,
       customer,
       paymentMethod,
-      items
+      items,
+      idempotencyKey
     })
 
     if (!result.success) {
