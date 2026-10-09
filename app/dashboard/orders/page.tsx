@@ -554,7 +554,7 @@ function OrdersContent() {
                         borderRadius: '50%',
                         backgroundColor: b.color,
                         marginTop: '4px',
-                        shrink: 0
+                        flexShrink: 0
                       }} />
                       <div style={{ flex: 1, fontSize: '11px' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

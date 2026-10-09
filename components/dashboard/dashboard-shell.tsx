@@ -26,6 +26,7 @@ import {
   ArrowRight
 } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
+import { useAuth } from '@/lib/use-auth'
 
 interface DashboardShellProps {
   children: React.ReactNode
@@ -35,6 +36,14 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { activeStore, stores, products, orders, analytics, actions, isClient } = useStorecraft()
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth()
+
+  // Route protection
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.push(`/login?redirect=${encodeURIComponent(pathname)}`)
+    }
+  }, [authLoading, isAuthenticated, pathname, router])
 
   // Dropdown states
   const [storeMenuOpen, setStoreMenuOpen] = useState(false)
@@ -71,7 +80,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
     setMobileMenuOpen(false)
   }, [pathname])
 
-  if (!isClient) {
+  if (!isClient || authLoading) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF3F1' }}>
         <p style={{ color: 'var(--slate)', fontSize: '14px', fontWeight: 600 }}>Loading StoreCraft Dashboard...</p>
@@ -151,9 +160,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
     return pathname?.startsWith(item.href)
   }
 
-  const ownerInitials = activeStore?.ownerName 
-    ? activeStore.ownerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
-    : 'JD'
+  const displayName = user?.name || activeStore?.ownerName || 'Jamie Davis'
+  const ownerInitials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#EEF3F1', display: 'flex', flexDirection: 'column' }}>
@@ -296,7 +304,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           )}
 
           {/* Desktop Sidebar Navigation */}
-          <aside className="dashboard-nav" style={{ width: '230px', shrink: 0 }}>
+          <aside className="dashboard-nav" style={{ width: '230px', flexShrink: 0 }}>
             
             {/* Store Switcher Dropdown */}
             <div ref={storeMenuRef} style={{ position: 'relative' }}>
@@ -448,8 +456,8 @@ export function DashboardShell({ children }: DashboardShellProps) {
                     fontSize: '11px'
                   }}>
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--line)' }}>
-                      <strong style={{ display: 'block', color: 'var(--navy)' }}>{activeStore?.ownerName || 'Jamie Davis'}</strong>
-                      <span style={{ fontSize: '10px', color: 'var(--slate)' }}>{activeStore?.email || 'owner@storecraft.app'}</span>
+                      <strong style={{ display: 'block', color: 'var(--navy)' }}>{user?.name || activeStore?.ownerName || 'Jamie Davis'}</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--slate)' }}>{user?.email || activeStore?.email || 'owner@storecraft.app'}</span>
                     </div>
                     <button 
                       onClick={() => {
@@ -464,26 +472,37 @@ export function DashboardShell({ children }: DashboardShellProps) {
                         alignItems: 'center',
                         gap: '8px',
                         color: 'var(--navy)',
-                        background: 'none'
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '11px',
                       }}
                       className="hover:bg-muted"
                     >
                       <RotateCcw size={13} color="#64748B" /> Reset Demo Data
                     </button>
-                    <Link 
-                      href="/"
+                    <button 
+                      onClick={async () => {
+                        await logout()
+                        router.push('/login')
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         gap: '8px',
                         padding: '8px 12px',
                         color: '#DC2626',
-                        textDecoration: 'none'
+                        background: 'none',
+                        border: 'none',
+                        width: '100%',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontSize: '11px',
                       }}
                       className="hover:bg-muted"
                     >
-                      <LogOut size={13} /> Exit to Landing Page
-                    </Link>
+                      <LogOut size={13} /> Sign Out
+                    </button>
                   </div>
                 )}
               </div>
@@ -582,11 +601,11 @@ export function DashboardShell({ children }: DashboardShellProps) {
                               >
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                                   {n.type === 'warning' ? (
-                                    <AlertTriangle size={14} color="#EA580C" style={{ shrink: 0, marginTop: '2px' }} />
+                                    <AlertTriangle size={14} color="#EA580C" style={{ flexShrink: 0, marginTop: '2px' }} />
                                   ) : n.type === 'order' ? (
-                                    <ShoppingBag size={14} color="#2563EB" style={{ shrink: 0, marginTop: '2px' }} />
+                                    <ShoppingBag size={14} color="#2563EB" style={{ flexShrink: 0, marginTop: '2px' }} />
                                   ) : (
-                                    <Check size={14} color="#10B981" style={{ shrink: 0, marginTop: '2px' }} />
+                                    <Check size={14} color="#10B981" style={{ flexShrink: 0, marginTop: '2px' }} />
                                   )}
                                   <div>
                                     <strong style={{ fontSize: '11px', color: 'var(--navy)', display: 'block' }}>{n.title}</strong>
