@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   try {
     const { store, products } = await req.json()
     
-    let db = { stores: [], orders: [] }
+    let db: { stores: Store[]; orders: any[] } = { stores: [], orders: [] }
     if (fs.existsSync(DB_FILE)) {
       db = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8'))
     }
