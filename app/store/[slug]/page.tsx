@@ -85,9 +85,14 @@ export default async function StorePage({ params }: PageProps) {
     )
   }
 
+  const publishedStore = {
+    ...store,
+    products: store.products.filter(p => p.status !== 'draft')
+  }
+
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm font-semibold uppercase tracking-wider">Loading Store...</div>}>
-      <StorefrontView initialStore={store} />
+      <StorefrontView initialStore={publishedStore} />
     </Suspense>
   )
 }

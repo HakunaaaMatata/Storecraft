@@ -1,193 +1,269 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { 
-  Package, 
-  Plus, 
-  Search, 
-  Upload, 
-  Edit3, 
-  Trash2, 
-  AlertTriangle, 
-  X, 
-  Check, 
-  Image as ImageIcon,
-  ArrowRight,
-  Filter,
-  Sparkles
+  Package, Plus, Search, Upload, Edit3, Trash2, AlertTriangle, 
+  X, Check, Image as ImageIcon, ChevronLeft, ChevronRight, Filter
 } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
-import { Product } from '@/lib/store-data'
-import { getSampleProductsForCategories, getSampleProductsSummary } from '@/lib/sample-catalog'
+import { Product } from '@/lib/types'
 
 export default function ProductsPage() {
-  const { activeStore, products, analytics, actions } = useStorecraft()
+  const { activeStore } = useStorecraft()
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [notification, setNotification] = useState<{type: 'success'|'error', msg: string} | null>(null)
 
-  // Filters & Search
+  const fetchProducts = async () => {
+    if (!activeStore) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/store/${activeStore.slug}/products`)
+      if (!res.ok) throw new Error('Failed to fetch products')
+      const data = await res.json()
+      setProducts(data.products || [])
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (activeStore) {
+      fetchProducts()
+    }
+  }, [activeStore])
+
+  const notify = (msg: string, type: 'success' | 'error' = 'success') => {
+    setNotification({ msg, type })
+    setTimeout(() => setNotification(null), 5000)
+  }
+
+  // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('ALL')
   const [stockFilter, setStockFilter] = useState<'ALL' | 'LOW' | 'IN_STOCK'>('ALL')
+  const [sortOrder, setSortOrder] = useState<'newest'|'price_asc'|'price_desc'>('newest')
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
 
-  // Modal states
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  // Bulk Actions
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkAction, setBulkAction] = useState('')
+  const [bulkActionValue, setBulkActionValue] = useState('')
+
+  // Modal States
+  const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
-  const [isSampleModalOpen, setIsSampleModalOpen] = useState(false)
-  const [isGeneratingSamples, setIsGeneratingSamples] = useState(false)
-  const [sampleSuccessToast, setSampleSuccessToast] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // Form State
-  const initialFormState = {
-    name: '',
-    sku: '',
-    description: '',
-    category: '',
-    price: '',
-    stock: '',
-    imageUrl: ''
+  const initialForm = {
+    name: '', sku: '', description: '', category: '', 
+    price: '', compareAtPrice: '', stock: '', imageUrl: '', status: 'published' as 'draft'|'published',
+    variantSizes: '', variantColors: '', variantFinishes: ''
   }
-  const [formData, setFormData] = useState(initialFormState)
+  const [formData, setFormData] = useState(initialForm)
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
 
-  // Available categories
-  const categories = useMemo(() => {
-    const set = new Set<string>()
-    products.forEach(p => { if (p.category) set.add(p.category) })
-    if (activeStore?.categories) {
-      activeStore.categories.forEach(c => set.add(c))
-    }
-    return Array.from(set)
-  }, [products, activeStore])
+  // Derived state
+  const categories = useMemo(() => Array.from(new Set(products.map(p => p.category).filter(Boolean))), [products])
 
-  // Filtered Products
   const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      // Search
-      const q = searchQuery.toLowerCase().trim()
-      const matchesSearch = !q || 
-        p.name.toLowerCase().includes(q) || 
-        (p.sku && p.sku.toLowerCase().includes(q)) ||
-        (p.category && p.category.toLowerCase().includes(q))
-
-      // Category
+    let result = products.filter(p => {
+      const q = searchQuery.toLowerCase()
+      const matchesSearch = !q || p.title.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q)
       const matchesCategory = selectedCategory === 'ALL' || p.category === selectedCategory
-
-      // Stock
-      const isLow = p.stock <= analytics.lowStockThreshold
-      const matchesStock = 
-        stockFilter === 'ALL' ? true :
-        stockFilter === 'LOW' ? isLow : !isLow
-
+      
+      const threshold = p.lowStockThreshold || 5
+      const isLow = p.inventory <= threshold
+      const matchesStock = stockFilter === 'ALL' ? true : stockFilter === 'LOW' ? isLow : !isLow
+      
       return matchesSearch && matchesCategory && matchesStock
     })
-  }, [products, searchQuery, selectedCategory, stockFilter, analytics.lowStockThreshold])
 
-  // Validate form
-  const validateForm = (isEdit: boolean, currentId?: string): boolean => {
-    const errors: Record<string, string> = {}
+    if (sortOrder === 'price_asc') result.sort((a,b) => a.price - b.price)
+    else if (sortOrder === 'price_desc') result.sort((a,b) => b.price - a.price)
+    else result.sort((a,b) => b.id.localeCompare(a.id))
 
-    if (!formData.name.trim()) {
-      errors.name = 'Product name is required.'
-    }
+    return result
+  }, [products, searchQuery, selectedCategory, stockFilter, sortOrder])
 
-    if (!formData.sku.trim()) {
-      errors.sku = 'SKU is required.'
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedCategory, stockFilter, sortOrder])
+
+  // Handlers
+  const toggleSelectAll = () => {
+    if (selectedIds.size === paginatedProducts.length && paginatedProducts.length > 0) {
+      setSelectedIds(new Set())
     } else {
-      // Check SKU uniqueness in current store
-      const duplicate = products.find(p => 
-        p.sku?.toLowerCase() === formData.sku.trim().toLowerCase() && 
-        (!isEdit || p.id !== currentId)
-      )
-      if (duplicate) {
-        errors.sku = 'This SKU is already in use by another product in this store.'
-      }
+      setSelectedIds(new Set(paginatedProducts.map(p => p.id)))
     }
-
-    const priceNum = parseFloat(formData.price)
-    if (isNaN(priceNum) || priceNum < 0) {
-      errors.price = 'Price must be a valid non-negative number.'
-    }
-
-    const stockNum = parseInt(formData.stock, 10)
-    if (isNaN(stockNum) || stockNum < 0 || !Number.isInteger(Number(formData.stock))) {
-      errors.stock = 'Stock must be a valid non-negative integer.'
-    }
-
-    setFormErrors(errors)
-    return Object.keys(errors).length === 0
   }
 
-  // Handle Add Product Submit
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!validateForm(false)) return
-    if (!activeStore) return
+  const toggleSelect = (id: string) => {
+    const next = new Set(selectedIds)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setSelectedIds(next)
+  }
 
-    const newProd: Product = {
-      id: `prod-${Date.now()}`,
-      storeId: activeStore.id,
-      name: formData.name.trim(),
-      slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      description: formData.description.trim(),
-      category: formData.category.trim() || 'General',
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock, 10),
-      sku: formData.sku.trim().toUpperCase(),
-      images: formData.imageUrl.trim() ? [formData.imageUrl.trim()] : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80'],
-      createdAt: new Date().toISOString()
+  const handleBulkUpdate = async () => {
+    if (!activeStore || selectedIds.size === 0 || !bulkAction) return
+    const ids = Array.from(selectedIds)
+    
+    let updates: any = {}
+    if (bulkAction === 'status') updates.status = bulkActionValue
+    if (bulkAction === 'category') updates.category = bulkActionValue
+
+    if (Object.keys(updates).length === 0) return
+
+    try {
+      const res = await fetch(`/api/store/${activeStore.slug}/products`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productIds: ids, updates })
+      })
+      if (!res.ok) throw new Error('Bulk update failed')
+      const data = await res.json()
+      notify(`Successfully updated ${data.count} products`, 'success')
+      fetchProducts()
+      setSelectedIds(new Set())
+      setBulkAction('')
+    } catch (err: any) {
+      notify(err.message, 'error')
     }
+  }
 
-    actions.saveProduct(newProd)
-    setIsAddModalOpen(false)
-    setFormData(initialFormState)
+  const handleBulkDelete = async () => {
+    if (!activeStore || selectedIds.size === 0) return
+    if (!confirm(`Are you sure you want to delete ${selectedIds.size} products?`)) return
+    
+    let successCount = 0
+    let failCount = 0
+    for (const id of Array.from(selectedIds)) {
+      try {
+        const res = await fetch(`/api/store/${activeStore.slug}/products/${id}`, { method: 'DELETE' })
+        if (res.ok) successCount++
+        else failCount++
+      } catch (err) { failCount++ }
+    }
+    notify(`Deleted ${successCount} products${failCount > 0 ? `, ${failCount} failed` : ''}`, successCount > 0 ? 'success' : 'error')
+    fetchProducts()
+    setSelectedIds(new Set())
+  }
+
+  const openAdd = () => {
+    setEditingProduct(null)
+    setFormData(initialForm)
     setFormErrors({})
+    setIsModalOpen(true)
   }
-
-  // Handle Edit Product Click
-  const openEditModal = (p: Product) => {
+  
+  const openEdit = (p: Product) => {
     setEditingProduct(p)
     setFormData({
-      name: p.name,
+      name: p.title,
       sku: p.sku || '',
       description: p.description || '',
       category: p.category || '',
       price: p.price.toString(),
-      stock: p.stock.toString(),
-      imageUrl: p.images?.[0] || ''
+      compareAtPrice: p.compareAtPrice?.toString() || '',
+      stock: p.inventory.toString(),
+      imageUrl: p.images?.[0] || '',
+      status: p.status || 'published',
+      variantSizes: p.variants?.sizes?.join(', ') || '',
+      variantColors: p.variants?.colors?.map(c => c.name).join(', ') || '',
+      variantFinishes: p.variants?.finishes?.join(', ') || ''
     })
     setFormErrors({})
+    setIsModalOpen(true)
   }
 
-  // Handle Edit Product Submit
-  const handleEditSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!editingProduct || !activeStore) return
-    if (!validateForm(true, editingProduct.id)) return
+  const validate = () => {
+    const errs: Record<string, string> = {}
+    if (!formData.name) errs.name = 'Required'
+    if (!formData.sku) errs.sku = 'Required'
+    if (isNaN(parseFloat(formData.price)) || parseFloat(formData.price) < 0) errs.price = 'Invalid price'
+    if (isNaN(parseInt(formData.stock)) || parseInt(formData.stock) < 0) errs.stock = 'Invalid stock (cannot be negative)'
+    if (formData.compareAtPrice && isNaN(parseFloat(formData.compareAtPrice))) errs.compareAtPrice = 'Invalid price'
+    
+    const duplicate = products.find(p => p.sku === formData.sku && p.id !== editingProduct?.id)
+    if (duplicate) errs.sku = 'SKU must be unique'
 
-    const updated: Product = {
-      ...editingProduct,
-      name: formData.name.trim(),
-      slug: formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
-      description: formData.description.trim(),
-      category: formData.category.trim() || 'General',
+    setFormErrors(errs)
+    return Object.keys(errs).length === 0
+  }
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!validate() || !activeStore) return
+    
+    const payload = {
+      ...(editingProduct || {}),
+      title: formData.name,
+      sku: formData.sku,
+      description: formData.description,
+      category: formData.category || 'General',
       price: parseFloat(formData.price),
-      stock: parseInt(formData.stock, 10),
-      sku: formData.sku.trim().toUpperCase(),
-      images: formData.imageUrl.trim() ? [formData.imageUrl.trim()] : editingProduct.images
+      compareAtPrice: formData.compareAtPrice ? parseFloat(formData.compareAtPrice) : undefined,
+      inventory: parseInt(formData.stock),
+      lowStockThreshold: 5,
+      images: formData.imageUrl ? [formData.imageUrl] : editingProduct?.images || [],
+      status: formData.status,
+      variants: {
+        sizes: formData.variantSizes ? formData.variantSizes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+        colors: formData.variantColors ? formData.variantColors.split(',').map(s => ({ name: s.trim(), hex: '#000' })).filter(c => c.name) : undefined,
+        finishes: formData.variantFinishes ? formData.variantFinishes.split(',').map(s => s.trim()).filter(Boolean) : undefined,
+      },
+      features: editingProduct?.features || [],
+      subtitle: editingProduct?.subtitle || ''
     }
 
-    actions.saveProduct(updated)
-    setEditingProduct(null)
-    setFormData(initialFormState)
-    setFormErrors({})
+    try {
+      const method = editingProduct ? 'PUT' : 'POST'
+      const url = editingProduct 
+        ? `/api/store/${activeStore.slug}/products/${editingProduct.id}`
+        : `/api/store/${activeStore.slug}/products`
+        
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save product')
+      
+      notify(editingProduct ? 'Product updated' : 'Product created')
+      setIsModalOpen(false)
+      fetchProducts()
+    } catch (err: any) {
+      notify(err.message, 'error')
+    }
   }
 
-  // Handle Delete Confirm
-  const handleDeleteConfirm = () => {
-    if (!deletingProduct) return
-    actions.deleteProduct(deletingProduct.id)
-    setDeletingProduct(null)
+  const handleDelete = async (id: string) => {
+    if (!activeStore) return
+    try {
+      const res = await fetch(`/api/store/${activeStore.slug}/products/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      notify('Product deleted')
+      setDeletingId(null)
+      fetchProducts()
+    } catch (err: any) {
+      notify(err.message, 'error')
+    }
   }
 
   // Sample Generator Calculation & Handler
@@ -214,331 +290,144 @@ export default function ProductsPage() {
   }
 
   const inputStyle = (hasError: boolean) => ({
-    width: '100%',
-    padding: '8px 12px',
-    border: `1px solid ${hasError ? '#EF4444' : 'var(--line)'}`,
-    borderRadius: '4px',
-    fontSize: '12px',
-    backgroundColor: '#FFFFFF',
-    color: 'var(--navy)',
-    outline: 'none',
+    width: '100%', padding: '8px 12px', border: `1px solid ${hasError ? '#EF4444' : 'var(--line)'}`,
+    borderRadius: '4px', fontSize: '12px', backgroundColor: '#FFFFFF', color: 'var(--navy)', outline: 'none'
   })
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      
+      {notification && (
+        <div style={{ padding: '12px 16px', borderRadius: '4px', backgroundColor: notification.type === 'success' ? '#DCFCE7' : '#FEE2E2', color: notification.type === 'success' ? '#166534' : '#991B1B' }}>
+          {notification.msg}
+        </div>
+      )}
+
       {/* Top Action Bar */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '12px',
-        backgroundColor: '#FFFFFF',
-        padding: '16px 20px',
-        borderRadius: '6px',
-        border: '1px solid var(--line)'
-      }}>
-        {/* Search & Filters */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: '#FFFFFF', padding: '16px 20px', borderRadius: '6px', border: '1px solid var(--line)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            border: '1px solid var(--line)',
-            padding: '6px 10px',
-            borderRadius: '4px',
-            backgroundColor: '#FFFFFF',
-            minWidth: '220px'
-          }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--line)', padding: '6px 10px', borderRadius: '4px', minWidth: '220px' }}>
             <Search size={14} color="#667085" />
-            <input 
-              type="text"
-              placeholder="Search products, SKU, category..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ border: 'none', outline: 'none', fontSize: '11px', width: '100%', background: 'transparent' }}
-            />
+            <input type="text" placeholder="Search products..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: '11px', width: '100%', background: 'transparent' }} />
           </div>
 
-          {/* Category Filter */}
-          <select 
-            value={selectedCategory} 
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            style={{
-              padding: '6px 10px',
-              border: '1px solid var(--line)',
-              borderRadius: '4px',
-              fontSize: '11px',
-              backgroundColor: '#FFFFFF',
-              color: 'var(--slate)',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="ALL">All Categories ({products.length})</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
+          <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} style={{ padding: '6px 10px', border: '1px solid var(--line)', borderRadius: '4px', fontSize: '11px' }}>
+            <option value="ALL">All Categories</option>
+            {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
 
-          {/* Stock Filter */}
-          <select 
-            value={stockFilter} 
-            onChange={(e) => setStockFilter(e.target.value as any)}
-            style={{
-              padding: '6px 10px',
-              border: '1px solid var(--line)',
-              borderRadius: '4px',
-              fontSize: '11px',
-              backgroundColor: '#FFFFFF',
-              color: 'var(--slate)',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="ALL">All Stock Levels</option>
-            <option value="LOW">Low Stock Only (≤ 5 units)</option>
-            <option value="IN_STOCK">Healthy Stock ({'>'} 5 units)</option>
+          <select value={stockFilter} onChange={(e) => setStockFilter(e.target.value as any)} style={{ padding: '6px 10px', border: '1px solid var(--line)', borderRadius: '4px', fontSize: '11px' }}>
+            <option value="ALL">All Stock</option>
+            <option value="LOW">Low Stock (≤ 5)</option>
+            <option value="IN_STOCK">Healthy Stock</option>
+          </select>
+
+          <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} style={{ padding: '6px 10px', border: '1px solid var(--line)', borderRadius: '4px', fontSize: '11px' }}>
+            <option value="newest">Newest First</option>
+            <option value="price_asc">Price (Low to High)</option>
+            <option value="price_desc">Price (High to Low)</option>
           </select>
         </div>
 
-        {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <button 
-            className="button button-light" 
-            onClick={() => setIsSampleModalOpen(true)}
-            style={{ padding: '8px 14px', fontSize: '11px', border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            title="Generate sample catalog items matching store categories"
-          >
-            <Sparkles size={13} color="#059669" /> Generate Samples
-          </button>
-          <Link href="/dashboard/products/import" style={{ textDecoration: 'none' }}>
-            <button 
-              className="button button-light" 
-              style={{ padding: '8px 14px', fontSize: '11px', border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Upload size={13} /> Import Spreadsheet
-            </button>
-          </Link>
-          <button 
-            className="button button-green" 
-            onClick={() => {
-              setFormData(initialFormState)
-              setFormErrors({})
-              setIsAddModalOpen(true)
-            }}
-            style={{ padding: '8px 14px', fontSize: '11px' }}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="button button-green" onClick={openAdd} style={{ padding: '8px 14px', fontSize: '11px' }}>
             <Plus size={13} /> Add Product
           </button>
         </div>
       </div>
 
-      {/* Success Toast */}
-      {sampleSuccessToast && (
-        <div style={{
-          backgroundColor: '#ECFDF5',
-          border: '1px solid #A7F3D0',
-          color: '#065F46',
-          padding: '12px 16px',
-          borderRadius: '6px',
-          fontSize: '12px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Check size={16} color="#059669" />
-            <span>{sampleSuccessToast}</span>
-          </div>
-          <button 
-            onClick={() => setSampleSuccessToast(null)} 
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065F46' }}
-          >
-            <X size={14} />
-          </button>
+      {/* Bulk Actions */}
+      {selectedIds.size > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', backgroundColor: '#F0FDF4', borderRadius: '6px', border: '1px solid #BBF7D0' }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: '#166534' }}>{selectedIds.size} selected</span>
+          <select value={bulkAction} onChange={(e) => { setBulkAction(e.target.value); setBulkActionValue(''); }} style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--line)' }}>
+            <option value="">Bulk Action</option>
+            <option value="status">Change Status</option>
+            <option value="category">Change Category</option>
+            <option value="delete">Delete</option>
+          </select>
+
+          {bulkAction === 'status' && (
+            <select value={bulkActionValue} onChange={(e) => setBulkActionValue(e.target.value)} style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--line)' }}>
+              <option value="">Select Status</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+          )}
+
+          {bulkAction === 'category' && (
+            <input type="text" placeholder="New Category" value={bulkActionValue} onChange={(e) => setBulkActionValue(e.target.value)} style={{ padding: '4px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid var(--line)' }} />
+          )}
+
+          {bulkAction === 'delete' ? (
+            <button onClick={handleBulkDelete} className="button" style={{ background: '#DC2626', color: 'white', padding: '4px 12px', fontSize: '11px' }}>Confirm Delete</button>
+          ) : (
+            bulkAction && bulkActionValue && (
+              <button onClick={handleBulkUpdate} className="button" style={{ background: '#059669', color: 'white', padding: '4px 12px', fontSize: '11px' }}>Apply</button>
+            )
+          )}
         </div>
       )}
 
-      {/* Product Table Container */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        borderRadius: '6px',
-        border: '1px solid var(--line)',
-        overflow: 'hidden'
-      }}>
-        {filteredProducts.length === 0 ? (
+      {/* Table */}
+      <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid var(--line)', overflow: 'hidden' }}>
+        {isLoading ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--slate)' }}>Loading products...</div>
+        ) : error ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', color: '#DC2626' }}>{error}</div>
+        ) : paginatedProducts.length === 0 ? (
           <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--slate)' }}>
             <Package size={32} style={{ margin: '0 auto 12px', opacity: 0.4 }} />
-            <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', color: 'var(--navy)' }}>
-              {products.length === 0 ? 'No products in your catalog yet' : 'No matching products found'}
-            </h4>
-            <p style={{ fontSize: '12px', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto' }}>
-              {products.length === 0 
-                ? 'Get started by generating instant category-tailored sample products, importing a spreadsheet, or creating one manually.'
-                : 'Try adjusting your search query or filters to find what you are looking for.'}
-            </p>
-            {products.length === 0 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                <button 
-                  onClick={() => setIsSampleModalOpen(true)}
-                  className="button button-green" 
-                  style={{ padding: '8px 16px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Sparkles size={13} /> Generate Sample Products
-                </button>
-                <Link href="/dashboard/products/import" style={{ textDecoration: 'none' }}>
-                  <button className="button button-light" style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}>
-                    <Upload size={13} /> Import CSV / Excel
-                  </button>
-                </Link>
-                <button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="button button-light" 
-                  style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
-                >
-                  <Plus size={13} /> Add Single Product
-                </button>
-              </div>
-            )}
+            <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', color: 'var(--navy)' }}>No products found</h4>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12px' }}>
               <thead>
-                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid var(--line)', color: 'var(--slate)', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <th style={{ padding: '12px 16px', width: '60px' }}>Item</th>
-                  <th style={{ padding: '12px 16px' }}>Title & Description</th>
+                <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid var(--line)', color: 'var(--slate)', fontSize: '10px', textTransform: 'uppercase' }}>
+                  <th style={{ padding: '12px 16px', width: '40px' }}>
+                    <input type="checkbox" checked={selectedIds.size === paginatedProducts.length && paginatedProducts.length > 0} onChange={toggleSelectAll} />
+                  </th>
+                  <th style={{ padding: '12px 16px', width: '60px' }}>Image</th>
+                  <th style={{ padding: '12px 16px' }}>Title</th>
+                  <th style={{ padding: '12px 16px' }}>Status</th>
                   <th style={{ padding: '12px 16px' }}>SKU</th>
-                  <th style={{ padding: '12px 16px' }}>Category</th>
                   <th style={{ padding: '12px 16px' }}>Price</th>
-                  <th style={{ padding: '12px 16px' }}>Stock Count</th>
+                  <th style={{ padding: '12px 16px' }}>Stock</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((p) => {
-                  const isLowStock = p.stock <= analytics.lowStockThreshold
+                {paginatedProducts.map(p => {
+                  const isLowStock = p.inventory <= (p.lowStockThreshold || 5)
                   const thumb = p.images?.[0]
-
                   return (
-                    <tr 
-                      key={p.id} 
-                      style={{ borderBottom: '1px solid var(--line)', transition: 'background-color 0.15s' }}
-                      className="hover:bg-muted"
-                    >
-                      {/* Thumbnail */}
+                    <tr key={p.id} style={{ borderBottom: '1px solid var(--line)' }} className="hover:bg-muted">
                       <td style={{ padding: '12px 16px' }}>
-                        {thumb ? (
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '4px',
-                            backgroundImage: `url(${thumb})`,
-                            backgroundSize: 'cover',
-                            backgroundPosition: 'center',
-                            border: '1px solid var(--line)'
-                          }} />
-                        ) : (
-                          <div style={{
-                            width: '40px',
-                            height: '40px',
-                            borderRadius: '4px',
-                            backgroundColor: '#F1F5F9',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            color: '#94A3B8'
-                          }}>
-                            <ImageIcon size={18} />
-                          </div>
-                        )}
+                        <input type="checkbox" checked={selectedIds.has(p.id)} onChange={() => toggleSelect(p.id)} />
                       </td>
-
-                      {/* Title & Description */}
-                      <td style={{ padding: '12px 16px', maxWidth: '240px' }}>
-                        <strong style={{ display: 'block', color: 'var(--navy)', fontSize: '12px' }}>{p.name}</strong>
-                        {p.description && (
-                          <span style={{ display: 'block', color: 'var(--slate)', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>
-                            {p.description}
-                          </span>
-                        )}
-                      </td>
-
-                      {/* SKU */}
-                      <td style={{ padding: '12px 16px', color: 'var(--slate)', fontFamily: 'monospace', fontSize: '11px' }}>
-                        {p.sku || 'N/A'}
-                      </td>
-
-                      {/* Category */}
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          backgroundColor: '#F1F5F9',
-                          color: '#334155',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '10px',
-                          fontWeight: 600
-                        }}>
-                          {p.category || 'General'}
+                        {thumb ? <img src={thumb} alt="" style={{ width: 40, height: 40, borderRadius: 4, objectFit: 'cover' }} /> : <div style={{ width: 40, height: 40, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={16} color="#94a3b8" /></div>}
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <strong style={{ display: 'block', color: 'var(--navy)' }}>{p.title}</strong>
+                        <span style={{ fontSize: '10px', color: 'var(--slate)' }}>{p.category || 'General'}</span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 600, background: p.status === 'draft' ? '#F1F5F9' : '#DCFCE7', color: p.status === 'draft' ? '#475569' : '#166534' }}>
+                          {p.status === 'draft' ? 'Draft' : 'Published'}
                         </span>
                       </td>
-
-                      {/* Price */}
-                      <td style={{ padding: '12px 16px', fontWeight: 700, color: 'var(--navy)' }}>
-                        ${p.price.toFixed(2)}
-                      </td>
-
-                      {/* Stock Count & Low Stock Badge */}
+                      <td style={{ padding: '12px 16px', fontFamily: 'monospace' }}>{p.sku}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 700 }}>${p.price.toFixed(2)} {p.compareAtPrice && <span style={{ textDecoration: 'line-through', color: '#94a3b8', fontSize: '10px' }}>${p.compareAtPrice.toFixed(2)}</span>}</td>
                       <td style={{ padding: '12px 16px' }}>
-                        <span style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          backgroundColor: isLowStock ? '#FFF1E8' : '#E4F8F0',
-                          color: isLowStock ? '#B54708' : '#07875D'
-                        }}>
-                          {isLowStock && <AlertTriangle size={11} />}
-                          {p.stock} units
-                          {isLowStock && ' (Low Stock)'}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 700, backgroundColor: isLowStock ? '#FEF2F2' : '#F0FDF4', color: isLowStock ? '#991B1B' : '#166534' }}>
+                          {isLowStock && <AlertTriangle size={11} />} {p.inventory}
                         </span>
                       </td>
-
-                      {/* Actions */}
                       <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '8px' }}>
-                          <button 
-                            onClick={() => openEditModal(p)}
-                            title="Edit Product"
-                            style={{
-                              background: '#F8FAFC',
-                              border: '1px solid var(--line)',
-                              borderRadius: '4px',
-                              padding: '5px 8px',
-                              color: 'var(--slate)',
-                              cursor: 'pointer'
-                            }}
-                            className="hover:text-navy hover:bg-muted"
-                          >
-                            <Edit3 size={13} />
-                          </button>
-                          <button 
-                            onClick={() => setDeletingProduct(p)}
-                            title="Delete Product"
-                            style={{
-                              background: '#FEF2F2',
-                              border: '1px solid #FECACA',
-                              borderRadius: '4px',
-                              padding: '5px 8px',
-                              color: '#DC2626',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
+                          <button onClick={() => openEdit(p)} style={{ background: '#F8FAFC', border: '1px solid var(--line)', borderRadius: '4px', padding: '5px 8px', cursor: 'pointer' }}><Edit3 size={13} /></button>
+                          <button onClick={() => setDeletingId(p.id)} style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '4px', padding: '5px 8px', color: '#DC2626', cursor: 'pointer' }}><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
@@ -548,451 +437,113 @@ export default function ProductsPage() {
             </table>
           </div>
         )}
+
+        {totalPages > 1 && (
+          <div style={{ padding: '12px 16px', borderTop: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px' }}>
+            <span style={{ color: 'var(--slate)' }}>Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredProducts.length)} of {filteredProducts.length} entries</span>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)} style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: '4px', background: currentPage === 1 ? '#F1F5F9' : '#fff' }}><ChevronLeft size={14} /></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} style={{ padding: '4px 8px', border: '1px solid var(--line)', borderRadius: '4px', background: currentPage === totalPages ? '#F1F5F9' : '#fff' }}><ChevronRight size={14} /></button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ADD PRODUCT MODAL */}
-      {isAddModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(16, 24, 40, 0.5)',
-          zIndex: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '8px',
-            maxWidth: '520px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--navy)' }}>Add New Product</h3>
-              <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', cursor: 'pointer', color: 'var(--slate)' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Product Name *
-                </label>
-                <input 
-                  type="text" 
-                  placeholder="e.g. Ceramic Pour-Over Dripper"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={inputStyle(!!formErrors.name)}
-                />
-                {formErrors.name && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.name}</span>}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    SKU (Unique) *
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. NG-CRM-08"
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    style={inputStyle(!!formErrors.sku)}
-                  />
-                  {formErrors.sku && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.sku}</span>}
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Category
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="e.g. Ceramics"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={inputStyle(false)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Price ($) *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    style={inputStyle(!!formErrors.price)}
-                  />
-                  {formErrors.price && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.price}</span>}
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Stock Quantity *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="1"
-                    min="0"
-                    placeholder="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    style={inputStyle(!!formErrors.stock)}
-                  />
-                  {formErrors.stock && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.stock}</span>}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Image URL
-                </label>
-                <input 
-                  type="url" 
-                  placeholder="https://images.unsplash.com/..."
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  style={inputStyle(false)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Description
-                </label>
-                <textarea 
-                  rows={3}
-                  placeholder="Detailed description of product materials and specifications..."
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  style={{ ...inputStyle(false), resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--line)', paddingTop: '16px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="button button-light"
-                  style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="button button-green"
-                  style={{ padding: '8px 18px', fontSize: '11px' }}
-                >
-                  Save Product
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* EDIT PRODUCT MODAL */}
-      {editingProduct && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(16, 24, 40, 0.5)',
-          zIndex: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '8px',
-            maxWidth: '520px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflowY: 'auto',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: 'var(--navy)' }}>Edit Product</h3>
-                <span style={{ fontSize: '10px', color: 'var(--slate)' }}>ID: {editingProduct.id}</span>
-              </div>
-              <button onClick={() => setEditingProduct(null)} style={{ background: 'none', cursor: 'pointer', color: 'var(--slate)' }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Product Name *
-                </label>
-                <input 
-                  type="text" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  style={inputStyle(!!formErrors.name)}
-                />
-                {formErrors.name && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.name}</span>}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    SKU (Unique) *
-                  </label>
-                  <input 
-                    type="text" 
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    style={inputStyle(!!formErrors.sku)}
-                  />
-                  {formErrors.sku && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.sku}</span>}
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Category
-                  </label>
-                  <input 
-                    type="text" 
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    style={inputStyle(false)}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Price ($) *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    style={inputStyle(!!formErrors.price)}
-                  />
-                  {formErrors.price && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.price}</span>}
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                    Stock Quantity *
-                  </label>
-                  <input 
-                    type="number" 
-                    step="1"
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    style={inputStyle(!!formErrors.stock)}
-                  />
-                  {formErrors.stock && <span style={{ color: '#EF4444', fontSize: '10px', marginTop: '2px', display: 'block' }}>{formErrors.stock}</span>}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Image URL
-                </label>
-                <input 
-                  type="url" 
-                  value={formData.imageUrl}
-                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                  style={inputStyle(false)}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--navy)', marginBottom: '4px' }}>
-                  Description
-                </label>
-                <textarea 
-                  rows={3}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  style={{ ...inputStyle(false), resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--line)', paddingTop: '16px' }}>
-                <button 
-                  type="button" 
-                  onClick={() => setEditingProduct(null)}
-                  className="button button-light"
-                  style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  className="button button-green"
-                  style={{ padding: '8px 18px', fontSize: '11px' }}
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE CONFIRMATION MODAL */}
-      {deletingProduct && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(16, 24, 40, 0.5)',
-          zIndex: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '8px',
-            maxWidth: '440px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
-              <AlertTriangle size={20} />
-            </div>
-            <h3 style={{ fontSize: '17px', fontWeight: 800, margin: '0 0 8px', color: 'var(--navy)' }}>Delete Product</h3>
-            <p style={{ fontSize: '12px', color: 'var(--slate)', margin: '0 0 16px', lineHeight: '1.5' }}>
-              Are you sure you want to delete <strong>{deletingProduct.name}</strong> (SKU: {deletingProduct.sku})? This will permanently remove it from your inventory and update your store metrics.
-            </p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button 
-                onClick={() => setDeletingProduct(null)}
-                className="button button-light"
-                style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleDeleteConfirm}
-                style={{
-                  backgroundColor: '#DC2626',
-                  color: '#FFFFFF',
-                  padding: '8px 16px',
-                  borderRadius: '5px',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  cursor: 'pointer'
-                }}
-              >
-                Confirm Delete
-              </button>
+      {/* Delete Modal */}
+      {deletingId && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ backgroundColor: '#fff', padding: '24px', borderRadius: '8px', maxWidth: '400px', width: '100%' }}>
+            <h3 style={{ margin: '0 0 12px', fontSize: '16px' }}>Confirm Deletion</h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--slate)' }}>Are you sure you want to delete this product? This action cannot be undone.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setDeletingId(null)} className="button button-light">Cancel</button>
+              <button onClick={() => handleDelete(deletingId)} className="button" style={{ background: '#DC2626', color: '#fff' }}>Delete</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* SAMPLE PRODUCT CONFIRMATION MODAL */}
-      {isSampleModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(16, 24, 40, 0.5)',
-          zIndex: 60,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '8px',
-            maxWidth: '520px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
-          }}>
+      {/* Add/Edit Modal */}
+      {isModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '8px', maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} color="#059669" />
-                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--navy)' }}>
-                  Generate Sample Products
-                </h3>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>{editingProduct ? 'Edit Product' : 'Add Product'}</h3>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Name *</label>
+                  <input type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} style={inputStyle(!!formErrors.name)} />
+                  {formErrors.name && <span style={{ color: '#EF4444', fontSize: '10px' }}>{formErrors.name}</span>}
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>SKU *</label>
+                  <input type="text" value={formData.sku} onChange={e => setFormData({...formData, sku: e.target.value})} style={inputStyle(!!formErrors.sku)} />
+                  {formErrors.sku && <span style={{ color: '#EF4444', fontSize: '10px' }}>{formErrors.sku}</span>}
+                </div>
               </div>
-              <button 
-                onClick={() => setIsSampleModalOpen(false)} 
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate)' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
 
-            <p style={{ fontSize: '12px', color: 'var(--slate)', margin: '0 0 16px', lineHeight: '1.5' }}>
-              This will generate <strong>{sampleSummary.count} realistic products</strong> tailored to the categories assigned to <strong>{activeStore?.name}</strong> ({activeStore?.categories?.join(', ')}).
-            </p>
-
-            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', padding: '14px', border: '1px solid var(--line)', marginBottom: '16px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', display: 'block', marginBottom: '6px' }}>
-                Category Breakdown:
-              </span>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
-                {sampleSummary.categoryBreakdown.map(b => (
-                  <span key={b.category} style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 600 }}>
-                    {b.category}: {b.count} items
-                  </span>
-                ))}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Price *</label>
+                  <input type="number" step="0.01" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} style={inputStyle(!!formErrors.price)} />
+                  {formErrors.price && <span style={{ color: '#EF4444', fontSize: '10px' }}>{formErrors.price}</span>}
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Compare-at Price</label>
+                  <input type="number" step="0.01" value={formData.compareAtPrice} onChange={e => setFormData({...formData, compareAtPrice: e.target.value})} style={inputStyle(!!formErrors.compareAtPrice)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Stock *</label>
+                  <input type="number" min="0" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} style={inputStyle(!!formErrors.stock)} />
+                  {formErrors.stock && <span style={{ color: '#EF4444', fontSize: '10px' }}>{formErrors.stock}</span>}
+                </div>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
-                Preview Items:
-              </span>
-              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', color: 'var(--slate)' }}>
-                {sampleSummary.previewNames.map((name, i) => (
-                  <li key={i}>{name}</li>
-                ))}
-              </ul>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button 
-                onClick={() => setIsSampleModalOpen(false)}
-                className="button button-light"
-                style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
-                disabled={isGeneratingSamples}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleGenerateSamples}
-                className="button button-green"
-                style={{ padding: '8px 20px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                disabled={isGeneratingSamples}
-              >
-                <Sparkles size={13} />
-                {isGeneratingSamples ? 'Generating Catalog...' : `Generate ${sampleSummary.count} Products`}
-              </button>
-            </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Category</label>
+                  <input type="text" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} style={inputStyle(false)} />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Status</label>
+                  <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value as 'draft'|'published'})} style={inputStyle(false)}>
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Variants (comma separated)</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <input type="text" placeholder="Sizes (S, M, L)" value={formData.variantSizes} onChange={e => setFormData({...formData, variantSizes: e.target.value})} style={inputStyle(false)} />
+                  <input type="text" placeholder="Colors (Red, Blue)" value={formData.variantColors} onChange={e => setFormData({...formData, variantColors: e.target.value})} style={inputStyle(false)} />
+                  <input type="text" placeholder="Finishes (Matte)" value={formData.variantFinishes} onChange={e => setFormData({...formData, variantFinishes: e.target.value})} style={inputStyle(false)} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Image URL</label>
+                <input type="text" value={formData.imageUrl} onChange={e => setFormData({...formData, imageUrl: e.target.value})} style={inputStyle(false)} />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Description</label>
+                <textarea rows={3} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} style={{...inputStyle(false), resize: 'vertical'}} />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '16px' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="button button-light">Cancel</button>
+                <button type="submit" className="button button-green">Save Product</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-
     </div>
   )
 }

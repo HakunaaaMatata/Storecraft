@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import { INITIAL_STORES } from './seed-data'
-import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId, User, Session } from './types'
+import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId, User, Session, Product } from './types'
 
 interface DbSchema {
   stores: Store[]
@@ -370,5 +370,44 @@ export function createStore(store: Store): { success: boolean; store?: Store; er
 export function getStoresByOwner(ownerId: string): Store[] {
   const db = ensureDbFile()
   return db.stores.filter((s) => s.ownerId === ownerId)
+}
+
+// Product methods
+export function getProductsByStore(storeSlug: string): Product[] {
+  const db = ensureDbFile()
+  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+  return store?.products || []
+}
+
+export function saveProduct(storeSlug: string, product: Product): { success: boolean; error?: string } {
+  const db = ensureDbFile()
+  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+  if (!store) return { success: false, error: 'Store not found' }
+
+  // Enforce unique SKU
+  const duplicate = store.products.find((p) => p.sku === product.sku && p.id !== product.id)
+  if (duplicate) {
+    return { success: false, error: 'SKU already exists in this store.' }
+  }
+
+  const existingIndex = store.products.findIndex((p) => p.id === product.id)
+  if (existingIndex >= 0) {
+    store.products[existingIndex] = product
+  } else {
+    store.products.unshift(product)
+  }
+
+  persistDb(db)
+  return { success: true }
+}
+
+export function deleteProduct(storeSlug: string, productId: string): { success: boolean; error?: string } {
+  const db = ensureDbFile()
+  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+  if (!store) return { success: false, error: 'Store not found' }
+
+  store.products = store.products.filter((p) => p.id !== productId)
+  persistDb(db)
+  return { success: true }
 }
 

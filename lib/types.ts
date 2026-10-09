@@ -50,6 +50,7 @@ export interface Product {
   features: string[]
   images: string[]
   variants: ProductVariant
+  status?: 'draft' | 'published'
 }
 
 export interface User {
