@@ -48,6 +48,7 @@ export default function DashboardOverviewPage() {
           <Link href="/dashboard/assistant">AI Assistant</Link>
           <Link href="/dashboard/theme">Theme Customizer</Link>
           <Link href="/onboard">Store Setup</Link>
+          <Link href={`/store/${activeStore.slug}`}>Live Storefront</Link>
         </nav>
         <div className="header-actions">
           <Link href="/dashboard/assistant" className="button button-green" style={{ padding: '9px 15px', fontSize: '11px' }}>
