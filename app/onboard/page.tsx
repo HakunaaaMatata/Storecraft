@@ -119,6 +119,13 @@ export default function OnboardPage() {
     }
   }, [])
 
+  // Enforce auth gate
+  useEffect(() => {
+    if (isClient && !authLoading && !isAuthenticated) {
+      router.push('/login?redirect=/onboard')
+    }
+  }, [isClient, authLoading, isAuthenticated, router])
+
   // Auto-fill user credentials when authenticated
   useEffect(() => {
     if (user && isClient) {
@@ -141,7 +148,7 @@ export default function OnboardPage() {
     }
   }, [step, formData, csvFile, isClient])
 
-  if (!isClient || authLoading) {
+  if (!isClient || authLoading || !isAuthenticated) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
         <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 600 }}>Loading StoreCraft setup wizard...</p>
