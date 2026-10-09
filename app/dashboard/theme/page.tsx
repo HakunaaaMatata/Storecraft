@@ -41,19 +41,26 @@ export default function ThemeCustomizerPage() {
   const currentTabInfo = tabs.find(t => t.id === activeTab)!
 
   return (
-    <main>
-      <header className="site-header">
-        <Link href="/dashboard" className="brand" style={{ color: 'var(--slate)' }}>
-          <ArrowLeft size={16} /> <span>Back to Dashboard</span>
-        </Link>
-        <div className="header-actions">
-          <button className="button button-green" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? 'Publishing...' : 'Publish to Live Store'} <Check />
-          </button>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        padding: '14px 20px',
+        borderRadius: '6px',
+        border: '1px solid var(--line)'
+      }}>
+        <div>
+          <strong style={{ fontSize: '13px', color: 'var(--navy)' }}>Storefront Theme Studio</strong>
+          <span style={{ fontSize: '11px', color: 'var(--slate)', display: 'block' }}>Customize color palette, typography, hero banners, and presets.</span>
         </div>
-      </header>
+        <button className="button button-green" onClick={handleSave} disabled={isSaving} style={{ padding: '8px 16px', fontSize: '11px' }}>
+          {isSaving ? 'Publishing...' : 'Publish to Live Store'} <Check size={13} />
+        </button>
+      </div>
 
-      <section className="workspace-section" style={{ minHeight: 'calc(100vh - 80px)' }}>
+      <section className="workspace-section" style={{ minHeight: 'calc(100vh - 180px)', borderRadius: '6px' }}>
         <div className="workspace-head">
           <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             <p className="eyebrow">Theme Customizer</p>
@@ -278,6 +285,6 @@ export default function ThemeCustomizerPage() {
           </div>
         </div>
       </section>
-    </main>
+    </div>
   )
 }

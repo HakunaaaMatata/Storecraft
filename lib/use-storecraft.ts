@@ -77,20 +77,27 @@ export function useStorecraft(storeSlugOrId?: string) {
     return res
   }
 
+  const importProducts = (newProducts: Product[]) => {
+    if (!activeStore) return []
+    const res = db.importProducts(activeStore.id, newProducts)
+    refresh()
+    return res
+  }
+
   const resetDemo = () => {
     db.resetToDemo()
     refresh()
   }
 
-  const totalRevenue = orders
-    .filter((o) => o.status !== 'Cancelled')
-    .reduce((sum, o) => sum + o.total, 0)
-
-  const totalOrders = orders.length
+  const eligibleOrders = orders.filter((o) => o.status !== 'Cancelled')
+  const totalRevenue = eligibleOrders.reduce((sum, o) => sum + o.total, 0)
+  const totalOrders = eligibleOrders.length
+  const rawOrdersCount = orders.length
   const totalDelivered = orders.filter((o) => o.status === 'Delivered').length
   const totalProcessing = orders.filter((o) => o.status === 'Placed' || o.status === 'Packed').length
   const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0
-  const lowStockCount = products.filter((p) => p.stock <= 5).length
+  const lowStockThreshold = 5
+  const lowStockCount = products.filter((p) => p.stock <= lowStockThreshold).length
 
   return {
     isClient,
@@ -101,9 +108,11 @@ export function useStorecraft(storeSlugOrId?: string) {
     analytics: {
       totalRevenue,
       totalOrders,
+      rawOrdersCount,
       totalDelivered,
       totalProcessing,
       averageOrderValue,
+      lowStockThreshold,
       lowStockCount,
       totalProducts: products.length,
     },
@@ -112,6 +121,7 @@ export function useStorecraft(storeSlugOrId?: string) {
       updateTheme,
       saveProduct,
       deleteProduct,
+      importProducts,
       updateOrderStatus,
       createOrder,
       resetDemo,

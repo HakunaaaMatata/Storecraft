@@ -37,6 +37,16 @@ export interface Product {
 
 export type OrderStatus = 'Placed' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled'
 
+export function canTransitionOrderStatus(current: OrderStatus, next: OrderStatus): boolean {
+  if (current === next) return false
+  if (current === 'Delivered' || current === 'Cancelled') return false
+  if (next === 'Cancelled') return true // Can cancel from Placed, Packed, Shipped
+  if (current === 'Placed' && next === 'Packed') return true
+  if (current === 'Packed' && next === 'Shipped') return true
+  if (current === 'Shipped' && next === 'Delivered') return true
+  return false
+}
+
 export interface OrderItem {
   productId: string
   name: string
@@ -223,16 +233,48 @@ export const INITIAL_ORDERS: Order[] = [
     id: 'ord-1048',
     storeId: 'store-northstar',
     orderNumber: '#1048',
-    customer: { name: 'Olivia Martin', email: 'olivia.m@example.com', phone: '+1 (555) 234-5678', address: '742 Evergreen Terrace, Springfield, OR' },
+    customer: { name: 'Olivia Martin', email: 'olivia.m@example.com', phone: '+1 (555) 234-5678', address: '742 Evergreen Terrace, Springfield, OR 97477' },
     items: [
       { productId: 'prod-forma-lamp', name: 'Forma Desk Lamp', price: 148, quantity: 1, selectedVariant: 'Matte Black', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80' },
     ],
     subtotal: 148, tax: 12.58, shipping: 0, total: 160.58, status: 'Delivered', paymentStatus: 'Paid (Demo)',
     statusHistory: [
       { status: 'Placed', timestamp: '2026-10-06T14:20:00.000Z', note: 'Customer completed demo checkout' },
+      { status: 'Packed', timestamp: '2026-10-07T09:15:00.000Z', note: 'Carefully packaged at fulfillment center' },
+      { status: 'Shipped', timestamp: '2026-10-07T14:30:00.000Z', note: 'Carrier dispatched tracking #SC-89104' },
       { status: 'Delivered', timestamp: '2026-10-08T16:10:00.000Z', note: 'Delivered to front porch' },
     ],
     createdAt: '2026-10-06T14:20:00.000Z',
+  },
+  {
+    id: 'ord-1047',
+    storeId: 'store-northstar',
+    orderNumber: '#1047',
+    customer: { name: 'Theo Walker', email: 'theo.w@example.com', phone: '+1 (555) 876-5432', address: '88 Market St, Suite 400, San Francisco, CA 94105' },
+    items: [
+      { productId: 'prod-mug', name: 'Hand-thrown Ceramic Mug', price: 34, quantity: 2, selectedVariant: 'Speckled Sand', image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80' },
+    ],
+    subtotal: 68, tax: 5.78, shipping: 10, total: 83.78, status: 'Packed', paymentStatus: 'Paid (Demo)',
+    statusHistory: [
+      { status: 'Placed', timestamp: '2026-10-07T11:45:00.000Z', note: 'Payment verified via Instant Demo Auth' },
+      { status: 'Packed', timestamp: '2026-10-08T10:20:00.000Z', note: 'Packed and waiting for carrier pickup' },
+    ],
+    createdAt: '2026-10-07T11:45:00.000Z',
+  },
+  {
+    id: 'ord-1046',
+    storeId: 'store-northstar',
+    orderNumber: '#1046',
+    customer: { name: 'Maya Chen', email: 'maya.chen@example.com', phone: '+1 (555) 432-1098', address: '124 Beacon St, Boston, MA 02116' },
+    items: [
+      { productId: 'prod-mug', name: 'Hand-thrown Ceramic Mug', price: 34, quantity: 1, selectedVariant: 'Chalk White', image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80' },
+      { productId: 'prod-forma-lamp', name: 'Forma Desk Lamp', price: 148, quantity: 1, selectedVariant: 'Terracotta', image: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80' },
+    ],
+    subtotal: 182, tax: 15.47, shipping: 0, total: 197.47, status: 'Placed', paymentStatus: 'Paid (Demo)',
+    statusHistory: [
+      { status: 'Placed', timestamp: '2026-10-08T15:30:00.000Z', note: 'Customer completed demo checkout' },
+    ],
+    createdAt: '2026-10-08T15:30:00.000Z',
   },
 ]
 
@@ -360,11 +402,33 @@ class StorecraftDatabase {
     return newOrder
   }
 
+  importProducts(storeId: string, newProducts: Product[]): Product[] {
+    const all = this.getProducts()
+    for (const prod of newProducts) {
+      const idx = all.findIndex((p) => p.id === prod.id && p.storeId === storeId)
+      if (idx >= 0) all[idx] = prod
+      else all.unshift(prod)
+    }
+    if (this.isBrowser()) {
+      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(all))
+      this.dispatchUpdate()
+    }
+    return this.getProducts(storeId)
+  }
+
   updateOrderStatus(orderId: string, status: OrderStatus, note?: string): Order | undefined {
     const all = this.getOrders()
     const order = all.find((o) => o.id === orderId)
     if (!order) return undefined
+
+    // Validate transition
+    if (order.status !== status && !canTransitionOrderStatus(order.status, status)) {
+      console.warn(`Invalid order status transition from ${order.status} to ${status}`)
+      return order
+    }
+
     order.status = status
+    if (!order.statusHistory) order.statusHistory = []
     order.statusHistory.unshift({ status, timestamp: new Date().toISOString(), note: note || `Updated to ${status}` })
     if (this.isBrowser()) {
       localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(all))
