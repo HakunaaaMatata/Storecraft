@@ -1,0 +1,206 @@
+import fs from 'fs'
+import path from 'path'
+import { INITIAL_STORES } from './seed-data'
+import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId } from './types'
+
+interface DbSchema {
+  stores: Store[]
+  orders: Order[]
+}
+
+const DATA_DIR = path.join(process.cwd(), 'data')
+const DB_FILE = path.join(DATA_DIR, 'storecraft-db.json')
+
+// In-memory cache
+let memoryDb: DbSchema | null = null
+
+function ensureDbFile(): DbSchema {
+  if (memoryDb) return memoryDb
+
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true })
+    }
+
+    if (fs.existsSync(DB_FILE)) {
+      const content = fs.readFileSync(DB_FILE, 'utf-8')
+      memoryDb = JSON.parse(content)
+      return memoryDb!
+    }
+  } catch (err) {
+    console.warn('[DB] Falling back to memory DB:', err)
+  }
+
+  // Initialize with seed data
+  memoryDb = {
+    stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
+    orders: []
+  }
+
+  persistDb(memoryDb)
+  return memoryDb
+}
+
+function persistDb(data: DbSchema) {
+  memoryDb = data
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true })
+    }
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8')
+  } catch (err) {
+    console.warn('[DB] Failed to persist file:', err)
+  }
+}
+
+export function getAllStores(): Store[] {
+  const db = ensureDbFile()
+  return db.stores
+}
+
+export function getStoreBySlug(slug: string): Store | null {
+  const db = ensureDbFile()
+  const normalizedSlug = slug.toLowerCase().trim()
+  
+  // Exact match
+  let found = db.stores.find((s) => s.slug.toLowerCase() === normalizedSlug)
+  if (found) return found
+
+  // Match by preset name
+  found = db.stores.find((s) => s.preset === normalizedSlug)
+  if (found) return found
+
+  // Fallback for demo: if unknown slug, clone default store with requested slug and name
+  const fallbackStore = db.stores[0]
+  if (fallbackStore) {
+    return {
+      ...fallbackStore,
+      id: `store-${normalizedSlug}`,
+      slug: normalizedSlug,
+      name: normalizedSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Store'
+    }
+  }
+
+  return null
+}
+
+export function updateStorePreset(slug: string, preset: ThemePresetId): Store | null {
+  const db = ensureDbFile()
+  const store = db.stores.find((s) => s.slug.toLowerCase() === slug.toLowerCase())
+  if (!store) return null
+
+  store.preset = preset
+  persistDb(db)
+  return store
+}
+
+export function getAllOrders(): Order[] {
+  const db = ensureDbFile()
+  return db.orders
+}
+
+export function getOrderById(id: string): Order | null {
+  const db = ensureDbFile()
+  return db.orders.find((o) => o.id === id) || null
+}
+
+export function getOrdersByStore(storeSlug: string): Order[] {
+  const db = ensureDbFile()
+  return db.orders.filter((o) => o.storeSlug.toLowerCase() === storeSlug.toLowerCase())
+}
+
+export interface CreateOrderParams {
+  storeSlug: string
+  customer: ShippingAddress
+  paymentMethod: string
+  items: CartItem[]
+}
+
+export function createOrder({
+  storeSlug,
+  customer,
+  paymentMethod,
+  items
+}: CreateOrderParams): { success: boolean; order?: Order; error?: string } {
+  const db = ensureDbFile()
+  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+    || db.stores[0] // fallback if dynamic slug
+
+  if (!store) {
+    return { success: false, error: 'Store not found' }
+  }
+
+  if (!items || items.length === 0) {
+    return { success: false, error: 'Cart is empty' }
+  }
+
+  // 1. Check stock availability for all products
+  for (const item of items) {
+    const product = store.products.find((p) => p.id === item.productId)
+    if (!product) {
+      return { success: false, error: `Product "${item.title}" no longer exists.` }
+    }
+    if (product.inventory < item.quantity) {
+      return {
+        success: false,
+        error: `Insufficient stock for "${item.title}". Only ${product.inventory} available.`
+      }
+    }
+  }
+
+  // 2. Decrement inventory in the database
+  for (const item of items) {
+    const product = store.products.find((p) => p.id === item.productId)!
+    product.inventory = Math.max(0, product.inventory - item.quantity)
+  }
+
+  // 3. Calculate order financials
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const tax = Math.round(subtotal * 0.08 * 100) / 100
+  const shipping = subtotal >= 100 ? 0 : 10
+  const total = Math.round((subtotal + tax + shipping) * 100) / 100
+
+  // 4. Create Order record
+  const orderNumber = Math.floor(10000 + Math.random() * 90000)
+  const newOrder: Order = {
+    id: `SC-${orderNumber}`,
+    storeSlug: store.slug,
+    storeName: store.name,
+    createdAt: new Date().toISOString(),
+    customer,
+    paymentMethod: paymentMethod || 'Demo Card (Instant Auth)',
+    items: items.map((item): OrderItem => ({
+      productId: item.productId,
+      sku: item.sku,
+      title: item.title,
+      image: item.image,
+      quantity: item.quantity,
+      unitPrice: item.price,
+      totalPrice: item.price * item.quantity,
+      selectedVariants: {
+        size: item.selectedSize,
+        color: item.selectedColor,
+        finish: item.selectedFinish
+      }
+    })),
+    subtotal,
+    tax,
+    shipping,
+    total,
+    status: 'PAID'
+  }
+
+  db.orders.unshift(newOrder)
+  persistDb(db)
+
+  return { success: true, order: newOrder }
+}
+
+export function resetDatabase() {
+  const db: DbSchema = {
+    stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
+    orders: []
+  }
+  persistDb(db)
+  return db
+}

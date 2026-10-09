@@ -1,0 +1,597 @@
+import { Store } from './types'
+
+export const INITIAL_STORES: Store[] = [
+  {
+    id: 'store-forma',
+    slug: 'forma',
+    name: 'Forma Living',
+    tagline: 'Objects with a quiet presence.',
+    announcement: 'Complimentary shipping worldwide on all orders above $120 · Code: QUIET2026',
+    preset: 'forma',
+    categories: ['All', 'Lighting', 'Ceramics', 'Furniture', 'Textiles'],
+    heroHeadline: 'Objects with a',
+    heroHeadlineEm: 'quiet presence.',
+    heroSubtitle: 'Minimal architectural lighting and handcrafted daily essentials built to outlive trends.',
+    heroImage: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=1600&q=80',
+    products: [
+      {
+        id: 'forma-p1',
+        sku: 'SKU-FL-101',
+        title: 'Forma Desk Lamp',
+        subtitle: 'Cast aluminum adjustable task light',
+        category: 'Lighting',
+        price: 148,
+        compareAtPrice: 180,
+        inventory: 14,
+        lowStockThreshold: 5,
+        description: 'Engineered from sand-cast aluminum with a balanced counterweight pivot. Casts a soft 2700K warm diffused glow, optimized for deep reading and studio work.',
+        features: [
+          'Full 360-degree brass ball pivot joint',
+          'Integrated dimmable capacitive touch control',
+          'CRI 95+ warm white diffused LED panel (50,000 hrs lifespan)',
+          'Braided herringbone power cord (2.2m)'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Standard', 'Studio Tall'],
+          colors: [
+            { name: 'Matte Charcoal', hex: '#262626' },
+            { name: 'Warm Alabaster', hex: '#e8e5dc' },
+            { name: 'Raw Olive', hex: '#4d5145' }
+          ],
+          finishes: ['Matte Powdercoat', 'Brushed Anodized']
+        }
+      },
+      {
+        id: 'forma-p2',
+        sku: 'SKU-FL-102',
+        title: 'Monolith Stoneware Vase',
+        subtitle: 'Hand-thrown architectural ceramic',
+        category: 'Ceramics',
+        price: 86,
+        compareAtPrice: 98,
+        inventory: 4, // Low stock demo!
+        lowStockThreshold: 5,
+        description: 'Wheel-thrown from coarse volcanic clay and finished in a subtle unglazed mineral slip. Waterproof interior with a sculptural brutalist footprint.',
+        features: [
+          'Hand-finished by ceramic artisans in small batches',
+          'Glazed interior holds water for fresh botanicals',
+          'Weighted base with cork protective underlay',
+          'Each piece exhibits subtle natural kiln variations'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1612196808214-b8e1d6145a8c?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Medium (22cm)', 'Large (32cm)'],
+          colors: [
+            { name: 'Volcanic Bone', hex: '#d9d4cc' },
+            { name: 'Obsidian Iron', hex: '#1c1b1a' }
+          ],
+          finishes: ['Raw Mineral', 'Semi-Satin Slip']
+        }
+      },
+      {
+        id: 'forma-p3',
+        sku: 'SKU-FL-103',
+        title: 'Kyoto Oak Side Table',
+        subtitle: 'FSC-certified solid European oak',
+        category: 'Furniture',
+        price: 260,
+        inventory: 7,
+        lowStockThreshold: 5,
+        description: 'A quiet geometric dialogue between three interlocking oak planes. Tool-free precision joinery allows assembly in under three minutes.',
+        features: [
+          'Solid FSC white oak with biological matte wax seal',
+          'Traditional mortise and tenon Japanese joinery',
+          'Supports up to 90kg with zero wobble',
+          'Soft rounded beveled edges'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1532323544230-7191fd51bc1b?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1533090161767-e6ffed986c88?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Compact (40cm)', 'Standard (50cm)'],
+          colors: [
+            { name: 'Natural White Oak', hex: '#c8ad88' },
+            { name: 'Smoked Bog Oak', hex: '#42372c' }
+          ],
+          finishes: ['Hardwax Matte', 'Raw Natural']
+        }
+      },
+      {
+        id: 'forma-p4',
+        sku: 'SKU-FL-104',
+        title: 'Woven Belgian Linen Throw',
+        subtitle: 'Pre-washed flax textile',
+        category: 'Textiles',
+        price: 94,
+        compareAtPrice: 110,
+        inventory: 18,
+        lowStockThreshold: 5,
+        description: 'Spun from certified Flemish flax on traditional dobby looms. Stonewashed for immediate relaxed drape and gentle skin feel across all seasons.',
+        features: [
+          '100% European Flax certification',
+          'Thermoregulating open waffle weave',
+          'Machine washable and softens with every wash',
+          'Hand-knotted eyelash fringe edging'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1600121848594-d8644e57abab?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Throw (130x180cm)', 'King Bed (220x240cm)'],
+          colors: [
+            { name: 'Natural Flax', hex: '#c9baa4' },
+            { name: 'Sage Moss', hex: '#7b8776' },
+            { name: 'Ink Navy', hex: '#1e2837' }
+          ],
+          finishes: ['Stonewashed Classic']
+        }
+      },
+      {
+        id: 'forma-p5',
+        sku: 'SKU-FL-105',
+        title: 'Fluted Ceramic Mug (Set of 2)',
+        subtitle: 'Wheel-formed matte stoneware',
+        category: 'Ceramics',
+        price: 48,
+        inventory: 3, // Low stock demo!
+        lowStockThreshold: 5,
+        description: 'Ergonomic cantilever handle balanced for a comforting morning hold. Tactile fluted exterior paired with an ultra-smooth glazed interior lip.',
+        features: [
+          '340ml capacity per cup',
+          'Microwave & dishwasher safe stoneware',
+          'Double-wall thermal insulating foot',
+          'Packaged in recycled unbleached kraft gift box'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1577937927133-66ef06acdf18?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Set of 2 (340ml)', 'Set of 4 (340ml)'],
+          colors: [
+            { name: 'Raw Sand', hex: '#ded6c7' },
+            { name: 'Terracotta Ash', hex: '#9d6350' }
+          ],
+          finishes: ['Matte Ribbed']
+        }
+      },
+      {
+        id: 'forma-p6',
+        sku: 'SKU-FL-106',
+        title: 'Pendant Dome 01',
+        subtitle: 'Spun brass architectural canopy',
+        category: 'Lighting',
+        price: 210,
+        inventory: 8,
+        lowStockThreshold: 5,
+        description: 'A pure geometric hemispere spun from heavy-gauge architectural brass. Reflects an amber glow down onto dining surfaces and kitchen islands.',
+        features: [
+          'Hand-spun solid brass housing with brushed protective sealant',
+          'Standard E26 porcelain socket (max 60W)',
+          'Includes dimmable amber filament bulb',
+          'Includes matching brass ceiling canopy kit'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1540932239986-30128078f3c5?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['30cm Diameter', '45cm Diameter'],
+          colors: [
+            { name: 'Brushed Brass', hex: '#d4af37' },
+            { name: 'Anodized Black', hex: '#1f1f1f' }
+          ],
+          finishes: ['Brushed Satin', 'Aged Patina']
+        }
+      }
+    ]
+  },
+  {
+    id: 'store-atelier',
+    slug: 'atelier',
+    name: 'Atelier St. Honoré',
+    tagline: 'Tailored with intent. Crafted forever.',
+    announcement: 'Private Collection Pre-Order Open · Express worldwide courier included on orders over $150',
+    preset: 'atelier',
+    categories: ['All', 'Outerwear', 'Knitwear', 'Accessories', 'Leatherware'],
+    heroHeadline: 'Tailored with intent.',
+    heroHeadlineEm: 'Crafted forever.',
+    heroSubtitle: 'Limited-run garments crafted in bi-annual editions using rare heritage textiles.',
+    heroImage: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85',
+    products: [
+      {
+        id: 'atelier-p1',
+        sku: 'SKU-AT-201',
+        title: 'Structured Melton Trench',
+        subtitle: 'Double-breasted virgin wool coat',
+        category: 'Outerwear',
+        price: 490,
+        compareAtPrice: 560,
+        inventory: 6,
+        lowStockThreshold: 5,
+        description: 'Cut from heavyweight 680gsm Melton wool woven in Biella, Italy. Features raglan sleeves, storm flap, horn buttons, and an unstructured relaxed drape.',
+        features: [
+          '100% Italian virgin melton wool',
+          'Natural water-repellent dense weave',
+          'Real buffalo horn buttons with hand-stitched shanks',
+          'Fully cupro-lined for effortless layering'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Small (38)', 'Medium (40)', 'Large (42)', 'XL (44)'],
+          colors: [
+            { name: 'Espresso Camel', hex: '#8a6240' },
+            { name: 'Midnight Charcoal', hex: '#1e2022' }
+          ],
+          finishes: ['Melton Brushed']
+        }
+      },
+      {
+        id: 'atelier-p2',
+        sku: 'SKU-AT-202',
+        title: 'Ribbed Cashmere Mockneck',
+        subtitle: '7-gauge Mongolian cashmere',
+        category: 'Knitwear',
+        price: 285,
+        inventory: 2, // Low stock demo!
+        lowStockThreshold: 5,
+        description: 'Spun from ethically sourced Grade-A Mongolian cashmere fiber. Substantial 7-gauge fisherman rib provides thermal loft without excessive bulk.',
+        features: [
+          '100% Grade-A Mongolian Cashmere',
+          'Zero chemical bleach fiber treatment',
+          'Reinforced tubular collar and cuffs hold shape',
+          'Slightly dropped shoulder silhouette'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['S', 'M', 'L'],
+          colors: [
+            { name: 'Unbleached Oatmeal', hex: '#e3dcce' },
+            { name: 'Charcoal Heather', hex: '#37383a' },
+            { name: 'Terracotta Rust', hex: '#944b36' }
+          ],
+          finishes: ['Raw Cashmere Soft']
+        }
+      },
+      {
+        id: 'atelier-p3',
+        sku: 'SKU-AT-203',
+        title: 'Saddle Leather Weekend Tote',
+        subtitle: 'Vegetable-tanned Tuscan bridle leather',
+        category: 'Leatherware',
+        price: 360,
+        inventory: 5,
+        lowStockThreshold: 5,
+        description: 'Constructed from full-grain vegetable-tanned shoulder hide that patinas richly over decades of travel. Features solid brass hardware and reinforced riveted handles.',
+        features: [
+          'Hand-beveled and burnished beeswax edges',
+          'Internal zippered passport sleeve and laptop divider',
+          'Solid sand-cast brass studs on bottom base',
+          'Handcrafted in Tuscany'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Medium Tote', 'Overnight Large'],
+          colors: [
+            { name: 'Cognac Saddle', hex: '#945327' },
+            { name: 'Noir Pitch', hex: '#1a1a1a' }
+          ],
+          finishes: ['Natural Patina Wax']
+        }
+      },
+      {
+        id: 'atelier-p4',
+        sku: 'SKU-AT-204',
+        title: 'Sculptural Sterling Cuff',
+        subtitle: 'Solid 925 sterling silver jewelry',
+        category: 'Accessories',
+        price: 175,
+        inventory: 9,
+        lowStockThreshold: 5,
+        description: 'Lost-wax cast by third-generation silversmiths. Features an undulating organic profile inspired by windswept coastal limestone.',
+        features: [
+          'Hand-stamped 925 maker hallmark',
+          'Micro-brushed silk matte finish',
+          'Adjustable tension opening accommodates wrists 15-20cm',
+          'Antioxidant tarnish pouch included'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1611591475152-4735d38d0145?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Standard Wrist (16-18cm)', 'Broad Wrist (18-21cm)'],
+          colors: [
+            { name: 'Sterling Silver 925', hex: '#d6dadf' },
+            { name: '18k Vermeil Gold', hex: '#d4af37' }
+          ],
+          finishes: ['Silk Brushed', 'High Polish Mirror']
+        }
+      }
+    ]
+  },
+  {
+    id: 'store-market',
+    slug: 'market',
+    name: 'Market & Provisions',
+    tagline: 'Good food from caring growers.',
+    announcement: 'Fresh weekly harvest dispatch every Tuesday & Friday · Free local pickup available',
+    preset: 'market',
+    categories: ['All', 'Oils & Vinegars', 'Pantry', 'Tea & Coffee', 'Kitchen'],
+    heroHeadline: 'Good food from',
+    heroHeadlineEm: 'caring growers.',
+    heroSubtitle: 'Direct farmstead olive oils, small-batch heirloom pantry essentials, and kitchenware.',
+    heroImage: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=85',
+    products: [
+      {
+        id: 'market-p1',
+        sku: 'SKU-MP-301',
+        title: 'Cold-Pressed Early Harvest Olive Oil',
+        subtitle: 'Single estate Koroneiki extra virgin (500ml)',
+        category: 'Oils & Vinegars',
+        price: 38,
+        compareAtPrice: 44,
+        inventory: 26,
+        lowStockThreshold: 5,
+        description: 'Milled within 4 hours of hand-picking on sun-drenched Peloponnese hillside groves. Peppery finish with polyphenols exceeding 620mg/kg.',
+        features: [
+          'Cold extraction below 24°C',
+          'Acidity level under 0.22%',
+          'UV-blocking coated glass bottle protects nutrients',
+          'Harvest date November 2026 clearly stamped'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['500ml Bottle', '1 Liter Tin', 'Case of 6 (500ml)'],
+          colors: [
+            { name: 'Dark Emerald Bottle', hex: '#1e382b' }
+          ],
+          finishes: ['Early Harvest Spicy', 'Late Harvest Mellow']
+        }
+      },
+      {
+        id: 'market-p2',
+        sku: 'SKU-MP-302',
+        title: 'Raw Wildflower Honey & Comb',
+        subtitle: 'Unheated mountain comb honey (400g)',
+        category: 'Pantry',
+        price: 24,
+        inventory: 5, // Low stock demo!
+        lowStockThreshold: 5,
+        description: 'Harvested from remote alpine meadows where bees forage on heather, wild thyme, and chestnut blossom. Never filtered or heated above hive temperature.',
+        features: [
+          '100% Raw unpasteurized with intact pollen and propolis',
+          'Contains fresh hand-cut honeycomb slice in jar',
+          'Crystallizes naturally into rich buttery spread',
+          'Recyclable faceted apothecary glass container'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1587049352846-4a222e784d38?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['400g Jar', '850g Family Crock'],
+          colors: [
+            { name: 'Golden Amber', hex: '#cf8e2c' }
+          ],
+          finishes: ['Raw with Comb', 'Creamed Smooth']
+        }
+      },
+      {
+        id: 'market-p3',
+        sku: 'SKU-MP-303',
+        title: 'Ceramic Pour-Over & Server Set',
+        subtitle: 'Artisan dripper with heat-resistant carafe',
+        category: 'Tea & Coffee',
+        price: 68,
+        compareAtPrice: 75,
+        inventory: 11,
+        lowStockThreshold: 5,
+        description: 'Engineered spiral ceramic ribs promote optimum coffee bloom and steady flow rate. Includes heatproof borosilicate server holding 600ml.',
+        features: [
+          'Thick ceramic body stabilizes water temperature',
+          'Compatible with standard V60 #02 conical filters',
+          'Laser-etched volumetric indicators on carafe',
+          'Spill-free spout geometry'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['1-2 Cup Kit', '2-4 Cup Kit'],
+          colors: [
+            { name: 'Sage Celadon', hex: '#8a9e88' },
+            { name: 'Matte Sand', hex: '#d8cfbe' }
+          ],
+          finishes: ['Artisan Speckled', 'Matte Chalk']
+        }
+      },
+      {
+        id: 'market-p4',
+        sku: 'SKU-MP-304',
+        title: 'Olivewood End-Grain Prep Board',
+        subtitle: 'Sustainably pruned Mediterranean olive wood',
+        category: 'Kitchen',
+        price: 78,
+        inventory: 1, // Super low stock demo!
+        lowStockThreshold: 5,
+        description: 'Carved from century-old orchard olivewood logs with mesmerizing marbling. Gentle on knife edges and naturally antibacterial.',
+        features: [
+          'Hand-rubbed with certified organic beeswax and mineral oil',
+          'Reversible with perimeter juice groove on reverse',
+          'Dense grain self-heals minor culinary cuts',
+          'Integrated ergonomic thumb recess for serving'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1590794056226-79ef3a8147e1?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Small (30x20cm)', 'Large (42x28cm)'],
+          colors: [
+            { name: 'Tiger Swirl Olive', hex: '#85582f' }
+          ],
+          finishes: ['Organic Beeswax Sealed']
+        }
+      }
+    ]
+  },
+  {
+    id: 'store-circuit',
+    slug: 'circuit',
+    name: 'Circuit Lab',
+    tagline: 'Hardware engineered for flow state.',
+    announcement: 'Next-day priority air shipping available on all mechanical input hardware',
+    preset: 'circuit',
+    categories: ['All', 'Keyboards', 'Audio', 'Workstation', 'Cables'],
+    heroHeadline: 'Hardware engineered for',
+    heroHeadlineEm: 'flow state.',
+    heroSubtitle: 'CNC aluminum mechanical interfaces, precision studio acoustics, and desk ergonomics.',
+    heroImage: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=1600&q=85',
+    products: [
+      {
+        id: 'circuit-p1',
+        sku: 'SKU-CL-401',
+        title: 'Circuit 65% Mechanical Keyboard',
+        subtitle: 'CNC gasket-mounted wireless terminal',
+        category: 'Keyboards',
+        price: 220,
+        compareAtPrice: 249,
+        inventory: 8,
+        lowStockThreshold: 5,
+        description: 'Milled from a solid block of 6063 aerospace aluminum. Dual silicone dampening gaskets and hot-swappable PCB deliver a deep acoustic profile with zero flex.',
+        features: [
+          'Tri-mode connectivity: 2.4GHz low latency, Bluetooth 5.3, USB-C',
+          'Factory-lubed linear switches (POM stem, 45g actuation)',
+          'Double-shot PBT cherry profile keycaps with side legends',
+          '4000mAh battery delivers up to 180 hours without RGB'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['65% Compact (67 Keys)', '75% Layout (82 Keys)'],
+          colors: [
+            { name: 'Anodized Space Gray', hex: '#262930' },
+            { name: 'Cyberpunk Emerald', hex: '#0a4233' },
+            { name: 'E-White Ceramic', hex: '#e8edf3' }
+          ],
+          finishes: ['Smooth Linear Switches', 'Tactile Bumpy Switches']
+        }
+      },
+      {
+        id: 'circuit-p2',
+        sku: 'SKU-CL-402',
+        title: 'Beryllium Driver Studio Monitors',
+        subtitle: 'Active near-field desk reference speakers (Pair)',
+        category: 'Audio',
+        price: 340,
+        inventory: 3, // Low stock demo!
+        lowStockThreshold: 5,
+        description: 'Featuring 4-inch woven Kevlar woofers and inverted beryllium dome tweeters. Bi-amplified 100W Class-D engine tuned for honest frequency reproduction.',
+        features: [
+          'Frequency response: 48Hz - 24kHz flat curve',
+          'Balanced XLR, 1/4" TRS, and optical lossless inputs',
+          'Acoustic boundary EQ compensation switches on rear',
+          'Precision CNC isolation riser feet included'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1545454675-3531b543be5d?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['4-Inch Pair (Compact Desk)', '5-Inch Pair (Studio Medium)'],
+          colors: [
+            { name: 'Matte Obsidian', hex: '#16191f' },
+            { name: 'Arctic White', hex: '#edf2f7' }
+          ],
+          finishes: ['Acoustic Matte Satin']
+        }
+      },
+      {
+        id: 'circuit-p3',
+        sku: 'SKU-CL-403',
+        title: 'Titanium Thunderbolt 5 Hub',
+        subtitle: '12-in-1 80Gbps multiport workstation dock',
+        category: 'Workstation',
+        price: 185,
+        compareAtPrice: 210,
+        inventory: 15,
+        lowStockThreshold: 5,
+        description: 'Next-generation 80Gbps bidirectional bandwidth supporting dual 8K 120Hz displays, 140W power delivery, 10GbE networking, and UHS-II SD cards.',
+        features: [
+          'Pass-through charging up to 140W USB-PD 3.1',
+          'Dual DisplayPort 2.1 and HDMI 2.1 8K outputs',
+          'Integrated silent copper vapor chamber cooling',
+          'Solid milled aerospace titanium alloy casing'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['Desktop Station (12-Port)', 'Travel Slim (7-Port)'],
+          colors: [
+            { name: 'Titanium Grey', hex: '#484f59' },
+            { name: 'Midnight Matte', hex: '#14171d' }
+          ],
+          finishes: ['Sandblasted Anodized']
+        }
+      },
+      {
+        id: 'circuit-p4',
+        sku: 'SKU-CL-404',
+        title: 'Coiled Custom Aviator Cable',
+        subtitle: 'Double-sleeved USB-C with GX16 detachable connector',
+        category: 'Cables',
+        price: 42,
+        inventory: 20,
+        lowStockThreshold: 5,
+        description: 'Tightly reverse-wound memory coil that will not lose shape. Features gold-plated USB-C ends and a quick-disconnect 4-pin metal aviator coupling.',
+        features: [
+          'PET flex sleeve over thick paracord double protection',
+          '1.5m straight extension host lead with 20cm coil',
+          'Supports up to 60W USB fast charging and 480Mbps data',
+          'Heavyweight zinc alloy quick-release collar'
+        ],
+        images: [
+          'https://images.unsplash.com/photo-1544717297-fa95b6ee9643?auto=format&fit=crop&w=1000&q=80',
+          'https://images.unsplash.com/photo-1595225476474-87563907a212?auto=format&fit=crop&w=1000&q=80'
+        ],
+        variants: {
+          sizes: ['1.5m Total Length'],
+          colors: [
+            { name: 'Cyber Mint & Black', hex: '#10b981' },
+            { name: 'Stealth Carbon', hex: '#23272e' }
+          ],
+          finishes: ['Matte Cerakote Aviator', 'Chrome Aviator']
+        }
+      }
+    ]
+  }
+]
