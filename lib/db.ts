@@ -120,7 +120,7 @@ export function getStoreBySlug(slug: string): Store | null {
   try {
     const cookieStore = cookies()
     const themeCookie = cookieStore.get('demo_store_theme')?.value
-    const businessTypeCookie = cookieStore.get('demo_business_type')?.value
+    let businessTypeCookie = cookieStore.get('demo_business_type')?.value
     const nameCookie = cookieStore.get('demo_store_name')?.value
 
     if (themeCookie) {
