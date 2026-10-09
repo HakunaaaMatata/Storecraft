@@ -14,10 +14,12 @@ import {
   Check, 
   Image as ImageIcon,
   ArrowRight,
-  Filter
+  Filter,
+  Sparkles
 } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
 import { Product } from '@/lib/store-data'
+import { getSampleProductsForCategories, getSampleProductsSummary } from '@/lib/sample-catalog'
 
 export default function ProductsPage() {
   const { activeStore, products, analytics, actions } = useStorecraft()
@@ -31,6 +33,9 @@ export default function ProductsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [isSampleModalOpen, setIsSampleModalOpen] = useState(false)
+  const [isGeneratingSamples, setIsGeneratingSamples] = useState(false)
+  const [sampleSuccessToast, setSampleSuccessToast] = useState<string | null>(null)
 
   // Form State
   const initialFormState = {
@@ -185,6 +190,29 @@ export default function ProductsPage() {
     setDeletingProduct(null)
   }
 
+  // Sample Generator Calculation & Handler
+  const sampleSummary = useMemo(() => {
+    return getSampleProductsSummary(activeStore?.categories || ['Home & Living'])
+  }, [activeStore?.categories])
+
+  const handleGenerateSamples = () => {
+    if (!activeStore || isGeneratingSamples) return
+    setIsGeneratingSamples(true)
+    setSampleSuccessToast(null)
+
+    const existingSkus = new Set(products.map((p) => p.sku?.toUpperCase()).filter(Boolean))
+    const sampleProds = getSampleProductsForCategories(
+      activeStore.categories || ['Home & Living'],
+      activeStore.id,
+      existingSkus
+    )
+
+    actions.importProducts(sampleProds)
+    setIsGeneratingSamples(false)
+    setIsSampleModalOpen(false)
+    setSampleSuccessToast(`Successfully added ${sampleProds.length} realistic sample products to ${activeStore.name}!`)
+  }
+
   const inputStyle = (hasError: boolean) => ({
     width: '100%',
     padding: '8px 12px',
@@ -274,13 +302,21 @@ export default function ProductsPage() {
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            className="button button-light" 
+            onClick={() => setIsSampleModalOpen(true)}
+            style={{ padding: '8px 14px', fontSize: '11px', border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            title="Generate sample catalog items matching store categories"
+          >
+            <Sparkles size={13} color="#059669" /> Generate Samples
+          </button>
           <Link href="/dashboard/products/import" style={{ textDecoration: 'none' }}>
             <button 
               className="button button-light" 
-              style={{ padding: '8px 14px', fontSize: '11px', border: '1px solid var(--line)' }}
+              style={{ padding: '8px 14px', fontSize: '11px', border: '1px solid var(--line)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
             >
-              <Upload size={13} /> Import CSV
+              <Upload size={13} /> Import Spreadsheet
             </button>
           </Link>
           <button 
@@ -297,6 +333,32 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      {/* Success Toast */}
+      {sampleSuccessToast && (
+        <div style={{
+          backgroundColor: '#ECFDF5',
+          border: '1px solid #A7F3D0',
+          color: '#065F46',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Check size={16} color="#059669" />
+            <span>{sampleSuccessToast}</span>
+          </div>
+          <button 
+            onClick={() => setSampleSuccessToast(null)} 
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#065F46' }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Product Table Container */}
       <div style={{
         backgroundColor: '#FFFFFF',
@@ -310,25 +372,32 @@ export default function ProductsPage() {
             <h4 style={{ fontSize: '15px', fontWeight: 800, margin: '0 0 6px', color: 'var(--navy)' }}>
               {products.length === 0 ? 'No products in your catalog yet' : 'No matching products found'}
             </h4>
-            <p style={{ fontSize: '12px', margin: '0 0 20px', maxWidth: '380px', marginInline: 'auto' }}>
+            <p style={{ fontSize: '12px', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto' }}>
               {products.length === 0 
-                ? 'Get started by creating your first product or importing an existing inventory spreadsheet.'
+                ? 'Get started by generating instant category-tailored sample products, importing a spreadsheet, or creating one manually.'
                 : 'Try adjusting your search query or filters to find what you are looking for.'}
             </p>
             {products.length === 0 && (
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
                 <button 
-                  onClick={() => setIsAddModalOpen(true)}
+                  onClick={() => setIsSampleModalOpen(true)}
                   className="button button-green" 
-                  style={{ padding: '8px 16px', fontSize: '11px' }}
+                  style={{ padding: '8px 16px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
-                  <Plus size={13} /> Add First Product
+                  <Sparkles size={13} /> Generate Sample Products
                 </button>
                 <Link href="/dashboard/products/import" style={{ textDecoration: 'none' }}>
                   <button className="button button-light" style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}>
                     <Upload size={13} /> Import CSV / Excel
                   </button>
                 </Link>
+                <button 
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="button button-light" 
+                  style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
+                >
+                  <Plus size={13} /> Add Single Product
+                </button>
               </div>
             )}
           </div>
@@ -835,6 +904,89 @@ export default function ProductsPage() {
                 }}
               >
                 Confirm Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SAMPLE PRODUCT CONFIRMATION MODAL */}
+      {isSampleModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(16, 24, 40, 0.5)',
+          zIndex: 60,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '8px',
+            maxWidth: '520px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.15)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={18} color="#059669" />
+                <h3 style={{ fontSize: '16px', fontWeight: 800, margin: 0, color: 'var(--navy)' }}>
+                  Generate Sample Products
+                </h3>
+              </div>
+              <button 
+                onClick={() => setIsSampleModalOpen(false)} 
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--slate)' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '12px', color: 'var(--slate)', margin: '0 0 16px', lineHeight: '1.5' }}>
+              This will generate <strong>{sampleSummary.count} realistic products</strong> tailored to the categories assigned to <strong>{activeStore?.name}</strong> ({activeStore?.categories?.join(', ')}).
+            </p>
+
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '6px', padding: '14px', border: '1px solid var(--line)', marginBottom: '16px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', display: 'block', marginBottom: '6px' }}>
+                Category Breakdown:
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                {sampleSummary.categoryBreakdown.map(b => (
+                  <span key={b.category} style={{ fontSize: '10px', padding: '3px 8px', borderRadius: '12px', backgroundColor: '#E2E8F0', color: '#1E293B', fontWeight: 600 }}>
+                    {b.category}: {b.count} items
+                  </span>
+                ))}
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--navy)', display: 'block', marginBottom: '4px' }}>
+                Preview Items:
+              </span>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '11px', color: 'var(--slate)' }}>
+                {sampleSummary.previewNames.map((name, i) => (
+                  <li key={i}>{name}</li>
+                ))}
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button 
+                onClick={() => setIsSampleModalOpen(false)}
+                className="button button-light"
+                style={{ padding: '8px 16px', fontSize: '11px', border: '1px solid var(--line)' }}
+                disabled={isGeneratingSamples}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleGenerateSamples}
+                className="button button-green"
+                style={{ padding: '8px 20px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                disabled={isGeneratingSamples}
+              >
+                <Sparkles size={13} />
+                {isGeneratingSamples ? 'Generating Catalog...' : `Generate ${sampleSummary.count} Products`}
               </button>
             </div>
           </div>

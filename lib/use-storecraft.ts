@@ -49,21 +49,39 @@ export function useStorecraft(storeSlugOrId?: string) {
     refresh()
   }
 
+  const syncServer = (storeToSync = activeStore) => {
+    if (!storeToSync || typeof window === 'undefined') return
+    try {
+      const allProducts = db.getProducts(storeToSync.id)
+      fetch('/api/sync-onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store: storeToSync, products: allProducts }),
+      }).catch((err) => console.warn('Background store sync warning:', err))
+    } catch (e) {
+      // Non-blocking sync
+    }
+  }
+
   const updateTheme = (theme: ThemeConfig) => {
     if (!activeStore) return
     db.updateStoreTheme(activeStore.id, theme)
     refresh()
+    const updatedStore = { ...activeStore, theme }
+    syncServer(updatedStore)
   }
 
   const saveProduct = (product: Product) => {
     db.saveProduct(product)
     refresh()
+    syncServer()
   }
 
   const deleteProduct = (productId: string) => {
     if (!activeStore) return
     db.deleteProduct(activeStore.id, productId)
     refresh()
+    syncServer()
   }
 
   const updateOrderStatus = (orderId: string, status: OrderStatus, note?: string) => {
@@ -81,6 +99,7 @@ export function useStorecraft(storeSlugOrId?: string) {
     if (!activeStore) return []
     const res = db.importProducts(activeStore.id, newProducts)
     refresh()
+    syncServer()
     return res
   }
 

@@ -29,6 +29,7 @@ import { useAuth } from '@/lib/use-auth'
 import { THEME_PRESETS, ThemeConfig } from '@/lib/theme-presets'
 import { ThemePresetId, Product } from '@/lib/types'
 import { db } from '@/lib/store-data'
+import { getSampleProductsSummary } from '@/lib/sample-catalog'
 
 const PREDEFINED_CATEGORIES = [
   'Fashion',
@@ -1124,6 +1125,45 @@ export default function OnboardPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Conditional Sample Products Confirmation & Preview UI */}
+              {formData.productsOption === 'sample' && (() => {
+                const summary = getSampleProductsSummary(formData.categories)
+                return (
+                  <div style={{
+                    padding: '20px',
+                    backgroundColor: '#F0FDF4',
+                    borderRadius: '8px',
+                    border: '1px solid #BBF7D0',
+                    marginBottom: '16px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={16} color="#059669" />
+                        <strong style={{ fontSize: '13px', color: '#065F46' }}>
+                          Sample Catalog Generation Preview ({summary.count} Products)
+                        </strong>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#047857', fontWeight: 700, backgroundColor: '#DCFCE7', padding: '3px 10px', borderRadius: '12px' }}>
+                        Deterministic & Collision-Free
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '12px', color: '#166534', margin: '0 0 12px', lineHeight: 1.5 }}>
+                      We will automatically generate realistic, coherent product records mapped directly to your {formData.categories.length} selected categories ({formData.categories.join(', ')}).
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                      {summary.categoryBreakdown.map((b) => (
+                        <span key={b.category} style={{ fontSize: '11px', padding: '4px 10px', backgroundColor: '#FFFFFF', border: '1px solid #86EFAC', borderRadius: '4px', color: '#14532D', fontWeight: 600 }}>
+                          {b.category}: {b.count} products
+                        </span>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#15803D' }}>
+                      <strong>Sample titles included:</strong> {summary.previewNames.join(', ')}
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Conditional CSV Upload UI */}
               {formData.productsOption === 'csv' && (
