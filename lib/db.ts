@@ -236,7 +236,7 @@ export function createOrder({
     tax,
     shipping,
     total,
-    status: 'PAID'
+    status: 'Placed'
   }
 
   db.orders.unshift(newOrder)

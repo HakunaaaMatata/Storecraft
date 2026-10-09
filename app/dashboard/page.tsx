@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { 
@@ -13,33 +13,76 @@ import {
   Clock, 
   ExternalLink,
   ChevronDown,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
 
 export default function DashboardOverviewPage() {
   const router = useRouter()
-  const { activeStore, products, orders, analytics } = useStorecraft()
+  const { activeStore } = useStorecraft()
   const [chartRange, setChartRange] = useState<'30' | '7' | 'all'>('30')
   const [hoveredPoint, setHoveredPoint] = useState<{ x: number; y: number; label: string; value: string } | null>(null)
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  // Eligible orders (excluding cancelled)
-  const eligibleOrders = orders.filter(o => o.status !== 'Cancelled')
-  const lowStockProducts = products.filter(p => p.stock <= 5)
-  const pendingOrders = orders.filter(o => o.status === 'Placed' || o.status === 'Packed')
+  useEffect(() => {
+    if (!activeStore) return;
+    setLoading(true)
+    fetch(`/api/store/${activeStore.slug}/analytics?period=${chartRange}`)
+      .then(res => res.json())
+      .then(resData => {
+        setData(resData)
+        setLoading(false)
+      })
+      .catch(err => {
+        console.error(err)
+        setLoading(false)
+      })
+  }, [activeStore, chartRange])
 
-  // Calculate chart points based on store orders or standard curve
-  // Standard 5-point revenue points matching the UI reference
-  const baseRevenue = analytics.totalRevenue > 0 ? analytics.totalRevenue : 24892.40
-  const chartPoints = [
-    { label: 'Sep 10', value: baseRevenue * 0.15, formatted: `$${(baseRevenue * 0.15).toFixed(0)}`, cx: 0, cy: 155 },
-    { label: 'Sep 17', value: baseRevenue * 0.28, formatted: `$${(baseRevenue * 0.28).toFixed(0)}`, cx: 175, cy: 130 },
-    { label: 'Sep 24', value: baseRevenue * 0.42, formatted: `$${(baseRevenue * 0.42).toFixed(0)}`, cx: 350, cy: 95 },
-    { label: 'Oct 1', value: baseRevenue * 0.65, formatted: `$${(baseRevenue * 0.65).toFixed(0)}`, cx: 525, cy: 55 },
-    { label: 'Oct 8', value: baseRevenue, formatted: `$${baseRevenue.toFixed(0)}`, cx: 700, cy: 20 },
-  ]
+  if (!activeStore) return null
 
-  // Intelligent Contextual Next Move Recommendation (matching Image 2)
+  const analytics = data?.metrics || {
+    totalRevenue: 0,
+    totalOrders: 0,
+    averageOrderValue: 0,
+    productsSold: 0,
+    lowStockCount: 0,
+    totalDelivered: 0,
+    totalProcessing: 0
+  }
+  
+  const recentOrders = data?.recentOrders || []
+  const chartPointsRaw = data?.chartPoints || []
+
+  // Ensure maxVal isn't 0
+  const maxVal = Math.max(...chartPointsRaw.map((p: any) => p.value), 1000)
+  
+  const chartPoints = chartPointsRaw.map((pt: any, i: number) => {
+    const cx = i * (700 / Math.max(1, chartPointsRaw.length - 1))
+    const cy = 205 - (pt.value / maxVal) * (205 - 20)
+    return {
+      ...pt,
+      cx,
+      cy
+    }
+  })
+
+  let pathD = ''
+  if (chartPoints.length > 0) {
+    pathD = `M ${chartPoints[0].cx} ${chartPoints[0].cy} `
+    for (let i = 1; i < chartPoints.length; i++) {
+      const prev = chartPoints[i - 1]
+      const curr = chartPoints[i]
+      const cp1x = prev.cx + (curr.cx - prev.cx) / 2
+      const cp1y = prev.cy
+      const cp2x = prev.cx + (curr.cx - prev.cx) / 2
+      const cp2y = curr.cy
+      pathD += `C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.cx} ${curr.cy} `
+    }
+  }
+
   let nextMove = {
     eyebrow: 'StoreCraft AI',
     title: 'One clear next move.',
@@ -48,50 +91,46 @@ export default function DashboardOverviewPage() {
     ctaLink: '/dashboard/products'
   }
 
-  if (lowStockProducts.length > 0) {
-    const firstLow = lowStockProducts[0]
+  if (analytics.lowStockCount > 0) {
     nextMove = {
       eyebrow: 'Inventory Alert',
       title: 'Restock popular items.',
-      description: `${firstLow.name} has only ${firstLow.stock} units remaining. Restock now to prevent missed orders.`,
+      description: `You have ${analytics.lowStockCount} items running low on stock. Restock now to prevent missed orders.`,
       ctaText: 'Manage inventory',
       ctaLink: '/dashboard/products'
     }
-  } else if (pendingOrders.length > 0) {
+  } else if (analytics.totalProcessing > 0) {
     nextMove = {
       eyebrow: 'Fulfillment Queue',
       title: 'Fulfill open orders.',
-      description: `You have ${pendingOrders.length} order(s) placed and waiting to be packed or shipped.`,
+      description: `You have ${analytics.totalProcessing} order(s) placed and waiting to be packed or shipped.`,
       ctaText: 'View orders queue',
       ctaLink: '/dashboard/orders'
     }
-  } else if (products.length === 0) {
-    nextMove = {
-      eyebrow: 'Catalog Setup',
-      title: 'Add your first product.',
-      description: 'Your catalog is empty. Upload products from a spreadsheet or add items manually.',
-      ctaText: 'Import catalog',
-      ctaLink: '/dashboard/products/import'
-    }
   }
 
+  // Calculate dynamic axis labels based on maxVal
+  const yLabels = [
+    `$${(maxVal).toFixed(0)}`,
+    `$${(maxVal * 0.66).toFixed(0)}`,
+    `$${(maxVal * 0.33).toFixed(0)}`,
+    '$0'
+  ]
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', opacity: loading ? 0.7 : 1, transition: 'opacity 0.2s' }}>
       
-      {/* 4 KPI Metric Cards (Strictly required in Section 4) */}
       <div className="metric-grid">
         
-        {/* KPI 1: Total Revenue */}
         <div>
           <small>Total Revenue</small>
           <strong>${analytics.totalRevenue.toFixed(2)}</strong>
           <span className="positive">
             <TrendingUp size={11} style={{ verticalAlign: 'middle', marginRight: '3px' }} />
-            +18.2% <small>vs. last month</small>
+            Current period
           </span>
         </div>
 
-        {/* KPI 2: Orders Count */}
         <div>
           <small>Orders Count</small>
           <strong>{analytics.totalOrders}</strong>
@@ -100,14 +139,12 @@ export default function DashboardOverviewPage() {
           </span>
         </div>
 
-        {/* KPI 3: Average Order Value */}
         <div>
           <small>Avg. Order Value</small>
           <strong>${analytics.averageOrderValue.toFixed(2)}</strong>
-          <span className="positive">+4.6% <small>vs. last month</small></span>
+          <span className="positive">Current period</span>
         </div>
 
-        {/* KPI 4: Low Stock Alerts */}
         <div>
           <small>Low Stock Alerts</small>
           <strong style={{ color: analytics.lowStockCount > 0 ? '#B54708' : '#07875D' }}>
@@ -121,10 +158,8 @@ export default function DashboardOverviewPage() {
 
       </div>
 
-      {/* Grid: Revenue Overview Chart + One Clear Next Move Card */}
       <div className="dash-grid">
         
-        {/* Revenue Overview Card */}
         <div className="dash-card revenue-card">
           <div className="card-top">
             <div>
@@ -132,6 +167,7 @@ export default function DashboardOverviewPage() {
               <p>Keep an eye on how your store is doing.</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {loading && <Loader2 size={14} className="animate-spin text-slate-400" />}
               <select 
                 value={chartRange} 
                 onChange={(e) => setChartRange(e.target.value as any)}
@@ -152,13 +188,9 @@ export default function DashboardOverviewPage() {
             </div>
           </div>
 
-          {/* SVG Line Chart with Gradient Fill & Hover Tooltips */}
           <div className="big-chart" style={{ position: 'relative' }}>
             <div className="chart-y">
-              <span>$3k</span>
-              <span>$2k</span>
-              <span>$1k</span>
-              <span>$0</span>
+              {yLabels.map((lbl, idx) => <span key={idx}>{lbl}</span>)}
             </div>
 
             <div className="chart-area" style={{ position: 'relative' }}>
@@ -177,22 +209,24 @@ export default function DashboardOverviewPage() {
                     <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
                   </linearGradient>
                 </defs>
-                {/* Gradient area under curve */}
-                <path 
-                  d="M0 205 C60 180 75 170 120 183 S190 150 230 164 S285 75 340 119 S390 148 430 98 S485 110 530 75 S590 92 630 47 S674 70 700 20 V230 H0Z" 
-                  fill="url(#revenue-area-grad)" 
-                />
-                {/* Crisp emerald line */}
-                <path 
-                  d="M0 205 C60 180 75 170 120 183 S190 150 230 164 S285 75 340 119 S390 148 430 98 S485 110 530 75 S590 92 630 47 S674 70 700 20" 
-                  fill="none" 
-                  stroke="#10b981" 
-                  strokeWidth="3.5" 
-                  strokeLinecap="round"
-                />
+                
+                {pathD && (
+                  <>
+                    <path 
+                      d={`${pathD} L 700 230 L 0 230 Z`}
+                      fill="url(#revenue-area-grad)" 
+                    />
+                    <path 
+                      d={pathD} 
+                      fill="none" 
+                      stroke="#10b981" 
+                      strokeWidth="3.5" 
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
 
-                {/* Interactive Points */}
-                {chartPoints.map((pt, i) => (
+                {chartPoints.map((pt: any, i: number) => (
                   <circle
                     key={i}
                     cx={pt.cx}
@@ -208,7 +242,6 @@ export default function DashboardOverviewPage() {
                 ))}
               </svg>
 
-              {/* Tooltip on hover */}
               {hoveredPoint && (
                 <div style={{
                   position: 'absolute',
@@ -231,7 +264,7 @@ export default function DashboardOverviewPage() {
               )}
 
               <div className="chart-labels">
-                {chartPoints.map((pt) => (
+                {chartPoints.map((pt: any) => (
                   <span key={pt.label}>{pt.label}</span>
                 ))}
               </div>
@@ -239,7 +272,6 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
 
-        {/* Right Card: One Clear Next Move (Matching Dark Reference Card) */}
         <div className="dash-card ai-insight" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div className="ai-icon">
@@ -262,56 +294,93 @@ export default function DashboardOverviewPage() {
 
       </div>
 
-      {/* Recent Orders Section (Matching Reference Card) */}
-      <div className="dash-card orders-card">
-        <div className="card-top">
-          <div>
-            <h3>Recent orders</h3>
-            <p>Stay close to every customer.</p>
+      <div className="dash-grid" style={{ gridTemplateColumns: '2fr 1fr' }}>
+        {/* Recent Orders Section */}
+        <div className="dash-card orders-card">
+          <div className="card-top">
+            <div>
+              <h3>Recent orders</h3>
+              <p>Stay close to every customer.</p>
+            </div>
+            <Link href="/dashboard/orders" className="text-button" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              View all <ArrowRight size={12} />
+            </Link>
           </div>
-          <Link href="/dashboard/orders" className="text-button" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            View all <ArrowRight size={12} />
-          </Link>
+
+          {recentOrders.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--slate)', fontSize: '12px' }}>
+              <ShoppingBag size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--navy)' }}>No orders yet</p>
+              <p style={{ margin: 0 }}>Orders placed by customers on your live storefront will appear here automatically.</p>
+            </div>
+          ) : (
+            <div className="orders" style={{ overflowX: 'auto' }}>
+              {recentOrders.slice(0, 5).map((o: any) => {
+                const itemsSummary = o.items.map((i: any) => `${i.title || i.name} × ${i.quantity}`).join(', ')
+                const isDelivered = o.status === 'Delivered'
+                const isProcessing = o.status === 'Placed' || o.status === 'Packed' || o.status === 'PROCESSING'
+                const isCancelled = o.status === 'Cancelled'
+
+                // Check if orderNumber is available, if not use part of ID
+                const displayOrderNum = o.orderNumber || o.id
+
+                return (
+                  <div 
+                    key={o.id} 
+                    onClick={() => router.push(`/dashboard/orders?selected=${o.id}`)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.15s' }}
+                    className="hover:bg-muted"
+                  >
+                    <span className="order-id">{displayOrderNum}</span>
+                    <span style={{ fontWeight: 600, color: 'var(--navy)' }}>{o.customer.fullName || o.customer.name}</span>
+                    <span className="order-product" style={{ color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {itemsSummary}
+                    </span>
+                    <strong>${(o.total || 0).toFixed(2)}</strong>
+                    <b style={{
+                      backgroundColor: isDelivered ? '#E4F8F0' : isProcessing ? '#FEF3C7' : isCancelled ? '#FEE2E2' : '#E0F2FE',
+                      color: isDelivered ? '#07875D' : isProcessing ? '#A16207' : isCancelled ? '#B91C1C' : '#0369A1',
+                    }}>
+                      {o.status}
+                    </b>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {orders.length === 0 ? (
-          <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--slate)', fontSize: '12px' }}>
-            <ShoppingBag size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
-            <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--navy)' }}>No orders yet</p>
-            <p style={{ margin: 0 }}>Orders placed by customers on your live storefront will appear here automatically.</p>
+        {/* Recent Activity Section */}
+        <div className="dash-card">
+          <div className="card-top">
+            <div>
+              <h3>Recent activity</h3>
+              <p>Store event history.</p>
+            </div>
           </div>
-        ) : (
-          <div className="orders" style={{ overflowX: 'auto' }}>
-            {orders.slice(0, 5).map((o) => {
-              const itemsSummary = o.items.map(i => `${i.name} × ${i.quantity}`).join(', ')
-              const isDelivered = o.status === 'Delivered'
-              const isProcessing = o.status === 'Placed' || o.status === 'Packed'
-              const isCancelled = o.status === 'Cancelled'
-
-              return (
-                <div 
-                  key={o.id} 
-                  onClick={() => router.push(`/dashboard/orders?selected=${o.id}`)}
-                  style={{ cursor: 'pointer', transition: 'background-color 0.15s' }}
-                  className="hover:bg-muted"
-                >
-                  <span className="order-id">{o.orderNumber}</span>
-                  <span style={{ fontWeight: 600, color: 'var(--navy)' }}>{o.customer.name}</span>
-                  <span className="order-product" style={{ color: 'var(--slate)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {itemsSummary}
-                  </span>
-                  <strong>${o.total.toFixed(2)}</strong>
-                  <b style={{
-                    backgroundColor: isDelivered ? '#E4F8F0' : isProcessing ? '#FEF3C7' : isCancelled ? '#FEE2E2' : '#E0F2FE',
-                    color: isDelivered ? '#07875D' : isProcessing ? '#A16207' : isCancelled ? '#B91C1C' : '#0369A1',
-                  }}>
-                    {o.status}
-                  </b>
+          
+          {data?.recentActivity?.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--slate)', fontSize: '12px' }}>
+              <Clock size={24} style={{ margin: '0 auto 8px', opacity: 0.5 }} />
+              <p style={{ margin: '0 0 4px', fontWeight: 700, color: 'var(--navy)' }}>No activity yet</p>
+              <p style={{ margin: 0 }}>Events will appear here as they happen.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+              {data?.recentActivity?.slice(0, 5).map((activity: any) => (
+                <div key={activity.id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activity.type === 'order_created' ? '#10b981' : '#3b82f6', marginTop: '6px', flexShrink: 0 }} />
+                  <div>
+                    <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: 'var(--navy)' }}>{activity.title}</p>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--slate)' }}>
+                      {new Date(activity.timestamp).toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
     </div>
