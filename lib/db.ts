@@ -25,7 +25,7 @@ const DEFAULT_DEMO_USER: User = {
   createdAt: '2026-01-01T00:00:00.000Z'
 }
 
-function ensureDbFile(): DbSchema {
+export function ensureDbFile(): DbSchema {
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true })

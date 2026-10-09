@@ -16,18 +16,14 @@ import {
   PlusCircle, 
   CheckCircle2,
   Package,
-  Layers
+  Layers,
+  PieChart,
+  XCircle,
+  ShieldCheck,
+  HelpCircle
 } from 'lucide-react'
 import { useStorecraft } from '@/lib/use-storecraft'
-import { 
-  processUserQuery, 
-  queryRestockAlerts, 
-  queryBestSellers, 
-  queryNetRevenue, 
-  queryFulfillmentStatus, 
-  queryExecutiveBriefing,
-  AssistantResponse 
-} from '@/lib/ai-assistant'
+import { AssistantQueryResult } from '@/lib/server-assistant'
 import { EvidenceCard } from './evidence-card'
 
 interface ChatMessage {
@@ -35,7 +31,8 @@ interface ChatMessage {
   sender: 'user' | 'assistant'
   timestamp: string
   text?: string
-  response?: AssistantResponse
+  response?: AssistantQueryResult
+  error?: string
 }
 
 interface CopilotChatProps {
@@ -43,173 +40,206 @@ interface CopilotChatProps {
 }
 
 export function CopilotChat({ embedded = false }: CopilotChatProps) {
-  const { activeStore, products, orders, actions, isClient } = useStorecraft()
+  const { activeStore, products, actions, isClient } = useStorecraft()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
-  const [isTyping, setIsTyping] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [activeChip, setActiveChip] = useState<string | null>(null)
+  const [providerBadge, setProviderBadge] = useState<{ name: string; isConfigured: boolean; note: string } | null>(null)
   const chatEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize with initial assistant briefing
+  // Fetch initial executive briefing on store load
   useEffect(() => {
     if (activeStore && messages.length === 0) {
-      const initialBriefing = queryExecutiveBriefing(activeStore.id)
-      setMessages([
-        {
-          id: 'welcome-msg',
-          sender: 'assistant',
-          timestamp: new Date().toISOString(),
-          response: initialBriefing,
-        },
-      ])
+      fetchExecutiveBriefing()
     }
-  }, [activeStore, messages.length])
+  }, [activeStore])
 
-  // Scroll to bottom on new messages
+  // Scroll chat window to bottom when messages update
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, isTyping])
+  }, [messages, isLoading])
+
+  const fetchExecutiveBriefing = async () => {
+    if (!activeStore) return
+    setIsLoading(true)
+    try {
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'Executive overview briefing for my store', storeId: activeStore.id })
+      })
+      const data = await res.json()
+      if (res.ok && data.success && data.response) {
+        setProviderBadge(data.response.providerStatus)
+        setMessages([
+          {
+            id: 'welcome-msg',
+            sender: 'assistant',
+            timestamp: new Date().toISOString(),
+            response: data.response
+          }
+        ])
+      }
+    } catch (e) {
+      console.warn('Initial briefing fetch notice:', e)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   if (!isClient || !activeStore) {
     return (
-      <div style={{ padding: '30px', textAlign: 'center', color: '#64748B' }}>
-        Connecting to store database...
+      <div style={{ padding: '36px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: 600 }}>
+        Connecting to StoreCraft Controlled Analytics Engine...
       </div>
     )
   }
 
   const promptChips = [
     {
-      id: 'restock',
-      label: 'Restock Alerts',
-      desc: 'Products with stock ≤ 5',
-      icon: AlertTriangle,
-      color: '#EA580C',
-      bg: '#FFF7ED',
-      border: '#FDBA74',
-      action: () => runQuery('restock', 'Which products are low in stock and need restocking?'),
-    },
-    {
-      id: 'bestsellers',
-      label: 'Best Sellers',
-      desc: 'Volume & revenue from completed orders',
+      id: 'top_selling',
+      label: 'Top-selling products',
+      desc: 'Top merchandise by volume & revenue this month',
       icon: TrendingUp,
       color: '#0284C7',
       bg: '#F0F9FF',
       border: '#BAE6FD',
-      action: () => runQuery('bestsellers', 'What are our best selling products by volume and revenue?'),
+      query: 'What were my top-selling products this month?'
     },
     {
-      id: 'revenue',
-      label: 'Net Revenue',
-      desc: 'Sum confirmed order totals',
+      id: 'low_stock',
+      label: 'Low stock items',
+      desc: 'Products at or below safety threshold (≤ 5 units)',
+      icon: AlertTriangle,
+      color: '#EA580C',
+      bg: '#FFF7ED',
+      border: '#FDBA74',
+      query: 'Which products are low on stock?'
+    },
+    {
+      id: 'revenue_compare',
+      label: 'Compare revenue WoW',
+      desc: 'Revenue this week vs last week baseline',
       icon: DollarSign,
       color: '#059669',
       bg: '#ECFDF5',
       border: '#A7F3D0',
-      action: () => runQuery('revenue', 'What is our net revenue from confirmed orders?'),
+      query: 'Compare revenue this week with last week.'
     },
     {
-      id: 'fulfillment',
-      label: 'Fulfillment Status',
-      desc: 'Orders awaiting packing or shipping',
+      id: 'pending_shipments',
+      label: 'Orders to be shipped',
+      desc: 'Orders awaiting warehouse packing or dispatch',
       icon: Truck,
       color: '#7C3AED',
       bg: '#F5F3FF',
       border: '#DDD6FE',
-      action: () => runQuery('fulfillment', 'Which orders are awaiting packing or shipping?'),
+      query: 'How many orders are waiting to be shipped?'
     },
     {
-      id: 'briefing',
-      label: 'Full Executive Summary',
-      desc: 'Complete business & health audit',
-      icon: BarChart2,
-      color: '#0F172A',
-      bg: '#F8FAFC',
-      border: '#CBD5E1',
-      action: () => runQuery('briefing', 'Give me an executive overview of store performance.'),
+      id: 'top_category',
+      label: 'Top revenue category',
+      desc: 'Sales and market share breakdown by category',
+      icon: PieChart,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      border: '#FDE68A',
+      query: 'Which category generated the most revenue?'
     },
+    {
+      id: 'cancelled_orders',
+      label: 'Recent cancelled orders',
+      desc: 'Lost revenue and order cancellation notes',
+      icon: XCircle,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      border: '#FECACA',
+      query: 'Show my recent cancelled orders.'
+    }
   ]
 
-  const runQuery = (chipId: string, userText: string) => {
-    setActiveChip(chipId)
+  const sendQueryToServer = async (userText: string, chipId?: string) => {
+    if (chipId) setActiveChip(chipId)
+    
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       sender: 'user',
       timestamp: new Date().toISOString(),
-      text: userText,
+      text: userText
     }
 
-    setMessages((prev) => [...prev, userMsg])
-    setIsTyping(true)
+    setMessages(prev => [...prev, userMsg])
+    setIsLoading(true)
 
-    setTimeout(() => {
-      let resp: AssistantResponse
-      if (chipId === 'restock') resp = queryRestockAlerts(activeStore.id)
-      else if (chipId === 'bestsellers') resp = queryBestSellers(activeStore.id)
-      else if (chipId === 'revenue') resp = queryNetRevenue(activeStore.id)
-      else if (chipId === 'fulfillment') resp = queryFulfillmentStatus(activeStore.id)
-      else if (chipId === 'briefing') resp = queryExecutiveBriefing(activeStore.id)
-      else resp = processUserQuery(activeStore.id, userText)
+    try {
+      const res = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userText, storeId: activeStore.id })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: `assist-err-${Date.now()}`,
+            sender: 'assistant',
+            timestamp: new Date().toISOString(),
+            error: data.error || 'Failed to query analytics engine. Please try again.'
+          }
+        ])
+        return
+      }
+
+      if (data.response?.providerStatus) {
+        setProviderBadge(data.response.providerStatus)
+      }
 
       const assistantMsg: ChatMessage = {
         id: `assist-${Date.now()}`,
         sender: 'assistant',
         timestamp: new Date().toISOString(),
-        response: resp,
+        response: data.response
       }
 
-      setMessages((prev) => [...prev, assistantMsg])
-      setIsTyping(false)
-    }, 450)
+      setMessages(prev => [...prev, assistantMsg])
+    } catch (err: any) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assist-err-${Date.now()}`,
+          sender: 'assistant',
+          timestamp: new Date().toISOString(),
+          error: 'Network connection error. Check server connectivity.'
+        }
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handleSendCustom = (e?: React.FormEvent) => {
+  const handleCustomSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault()
-    if (!inputValue.trim()) return
-
+    if (!inputValue.trim() || isLoading) return
     const text = inputValue.trim()
     setInputValue('')
     setActiveChip(null)
-
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      timestamp: new Date().toISOString(),
-      text,
-    }
-
-    setMessages((prev) => [...prev, userMsg])
-    setIsTyping(true)
-
-    setTimeout(() => {
-      const resp = processUserQuery(activeStore.id, text)
-      const assistantMsg: ChatMessage = {
-        id: `assist-${Date.now()}`,
-        sender: 'assistant',
-        timestamp: new Date().toISOString(),
-        response: resp,
-      }
-      setMessages((prev) => [...prev, assistantMsg])
-      setIsTyping(false)
-    }, 500)
+    sendQueryToServer(text)
   }
 
-  // Live Test Simulation Action: create a demo order to verify real-time grounding
-  const handleSimulateNewOrder = () => {
-    const randomProduct = products[0] || {
-      id: 'prod-forma-lamp',
-      name: 'Forma Desk Lamp',
-      price: 148,
-    }
-
+  // Demo order injector to verify live data updates in analytics
+  const handleInjectDemoOrder = () => {
+    const randomProduct = products[0] || { id: 'prod-forma-lamp', name: 'Forma Desk Lamp', price: 148 }
     actions.createOrder({
       storeId: activeStore.id,
       customer: {
-        name: 'Sarah Connor',
-        email: 'sarah.c@techcorp.io',
-        phone: '+1 (555) 910-3849',
-        address: '100 Cyberdyne Way, Los Angeles, CA',
+        name: 'Elena Rostova',
+        email: 'elena.r@example.com',
+        phone: '+1 (555) 321-9876',
+        address: '500 Tech Plaza, Seattle, WA',
       },
       items: [
         {
@@ -221,8 +251,8 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
       ],
       subtotal: randomProduct.price,
       tax: Math.round(randomProduct.price * 0.08 * 100) / 100,
-      shipping: 10,
-      total: Math.round((randomProduct.price + randomProduct.price * 0.08 + 10) * 100) / 100,
+      shipping: 12,
+      total: Math.round((randomProduct.price + randomProduct.price * 0.08 + 12) * 100) / 100,
       status: 'Placed',
       paymentStatus: 'Paid (Demo)',
     })
@@ -232,7 +262,7 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      height: embedded ? '600px' : 'calc(100vh - 120px)',
+      height: embedded ? '600px' : 'calc(100vh - 140px)',
       minHeight: '520px',
       backgroundColor: '#FFFFFF',
       borderRadius: '8px',
@@ -249,6 +279,8 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid #1E293B',
+        flexWrap: 'wrap',
+        gap: '10px'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
@@ -266,12 +298,12 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 800, letterSpacing: '-0.02em', color: '#FFFFFF' }}>
-                StoreCraft Business Copilot
+                StoreCraft Business Assistant
               </h2>
               <span style={{
-                backgroundColor: '#064E3B',
-                color: '#6EE7B7',
-                border: '1px solid #047857',
+                backgroundColor: providerBadge?.isConfigured ? '#064E3B' : '#1E293B',
+                color: providerBadge?.isConfigured ? '#6EE7B7' : '#94A3B8',
+                border: `1px solid ${providerBadge?.isConfigured ? '#047857' : '#334155'}`,
                 fontSize: '10px',
                 fontWeight: 700,
                 padding: '2px 8px',
@@ -280,21 +312,21 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
                 alignItems: 'center',
                 gap: '4px',
               }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981' }} />
-                Grounded RAG Live
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: providerBadge?.isConfigured ? '#10B981' : '#94A3B8' }} />
+                {providerBadge ? providerBadge.providerName : 'Controlled Analytics Engine'}
               </span>
             </div>
             <p style={{ margin: '3px 0 0', fontSize: '11px', color: '#94A3B8' }}>
-              Connected to database for <strong>{activeStore.name}</strong> • Zero hallucination
+              Scoped to store: <strong>{activeStore.name}</strong> • Tenant Isolated Read-Only Engine
             </p>
           </div>
         </div>
 
-        {/* Live Simulation & Reset Tools */}
+        {/* Action Button for Live Injection */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
-            onClick={handleSimulateNewOrder}
-            title="Inject an order into live DB to test live data updates"
+            onClick={handleInjectDemoOrder}
+            title="Inject an order into live database to test real-time analytics"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -309,322 +341,287 @@ export function CopilotChat({ embedded = false }: CopilotChatProps) {
               cursor: 'pointer',
             }}
           >
-            <PlusCircle size={13} color="#10B981" />
-            <span>+ Test Order (Live DB)</span>
-          </button>
-          
-          <button
-            onClick={() => {
-              actions.resetDemo()
-              setMessages([])
-            }}
-            title="Reset DB state"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: '#1E293B',
-              color: '#94A3B8',
-              border: '1px solid #334155',
-              padding: '6px 10px',
-              borderRadius: '6px',
-              fontSize: '11px',
-              cursor: 'pointer',
-            }}
-          >
-            <RefreshCw size={12} />
-            <span>Reset</span>
+            <PlusCircle size={13} color="#10B981" /> Simulate Order
           </button>
         </div>
       </div>
 
-      {/* Suggestion Prompt Chips Ribbon */}
-      <div style={{
-        padding: '12px 16px',
-        backgroundColor: '#F8FAFC',
-        borderBottom: '1px solid #E2E8F0',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        overflowX: 'auto',
-      }}>
-        <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', marginRight: '4px' }}>
-          Prompt Chips:
-        </span>
-        {promptChips.map((chip) => {
-          const Icon = chip.icon
-          const isSelected = activeChip === chip.id
-          return (
-            <button
-              key={chip.id}
-              onClick={chip.action}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                backgroundColor: isSelected ? chip.color : chip.bg,
-                color: isSelected ? '#FFFFFF' : chip.color,
-                border: `1px solid ${isSelected ? chip.color : chip.border}`,
-                borderRadius: '20px',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                transition: 'all 0.15s ease',
-                boxShadow: isSelected ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-              }}
-            >
-              <Icon size={13} />
-              <span>{chip.label}</span>
-            </button>
-          )
-        })}
-      </div>
+      {/* Provider Status Info Banner */}
+      {providerBadge && !providerBadge.isConfigured && (
+        <div style={{
+          backgroundColor: '#FFFBEB',
+          borderBottom: '1px solid #FDE68A',
+          color: '#92400E',
+          padding: '8px 16px',
+          fontSize: '11px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <HelpCircle size={14} color="#D97706" />
+            <span>{providerBadge.note}</span>
+          </div>
+          <span style={{ fontWeight: 700, color: '#B45309', fontSize: '10px' }}>100% Grounded Local Mode</span>
+        </div>
+      )}
 
-      {/* Chat Messages Body */}
+      {/* Chat Conversation Scroll View */}
       <div style={{
         flex: 1,
-        overflowY: 'auto',
         padding: '20px',
-        backgroundColor: '#F8FAFC',
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: '20px',
+        backgroundColor: '#F8FAFC',
       }}>
-        {messages.map((msg) => {
-          if (msg.sender === 'user') {
-            return (
-              <div
-                key={msg.id}
-                style={{
-                  alignSelf: 'flex-end',
-                  maxWidth: '75%',
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: '8px',
-                }}
-              >
-                <div style={{
-                  backgroundColor: '#101828',
-                  color: '#FFFFFF',
-                  padding: '10px 16px',
-                  borderRadius: '12px 12px 2px 12px',
-                  fontSize: '13px',
-                  lineHeight: '1.5',
-                  boxShadow: '0 2px 8px rgba(16, 24, 40, 0.1)',
-                }}>
-                  {msg.text}
-                </div>
-                <div style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  backgroundColor: '#E2E8F0',
-                  color: '#475569',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}>
-                  <User size={15} />
-                </div>
-              </div>
-            )
-          }
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+            }}
+          >
+            {/* Sender Label */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#64748B',
+              marginBottom: '6px',
+            }}>
+              {msg.sender === 'user' ? (
+                <>
+                  <span>Store Owner</span>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#101828', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <User size={12} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: '#10B981', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Bot size={12} />
+                  </div>
+                  <span>StoreCraft AI Assistant</span>
+                </>
+              )}
+            </div>
 
-          // Assistant message with Grounded Evidence Card
-          const resp = msg.response!
-          return (
-            <div
-              key={msg.id}
-              style={{
-                alignSelf: 'flex-start',
-                width: '100%',
-                maxWidth: '920px',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '12px',
-              }}
-            >
+            {/* Message Body */}
+            {msg.sender === 'user' ? (
               <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                backgroundColor: '#10B981',
-                color: '#101828',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                marginTop: '4px',
+                backgroundColor: '#101828',
+                color: '#FFFFFF',
+                padding: '12px 16px',
+                borderRadius: '12px 12px 2px 12px',
+                maxWidth: '80%',
+                fontSize: '13px',
+                lineHeight: 1.5,
               }}>
-                <Bot size={18} />
+                {msg.text}
               </div>
-
+            ) : msg.error ? (
               <div style={{
-                flex: 1,
-                backgroundColor: '#FFFFFF',
+                backgroundColor: '#FEF2F2',
+                border: '1px solid #FECACA',
+                color: '#991B1B',
+                padding: '14px 18px',
                 borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                padding: '18px 20px',
-                boxShadow: '0 2px 12px rgba(0, 0, 0, 0.04)',
+                maxWidth: '90%',
+                fontSize: '12px',
               }}>
-                {/* Assistant Answer Headline & Summary */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: '#059669',
-                  }}>
-                    Grounded Answer
-                  </span>
-                  <span style={{ color: '#CBD5E1' }}>•</span>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <AlertTriangle size={16} />
+                  <strong>Query Error</strong>
+                </div>
+                <p style={{ margin: 0 }}>{msg.error}</p>
+              </div>
+            ) : msg.response ? (
+              <div style={{
+                backgroundColor: msg.response.isSecurityBlock ? '#FFF5F5' : '#FFFFFF',
+                border: `1px solid ${msg.response.isSecurityBlock ? '#FECACA' : '#E2E8F0'}`,
+                borderRadius: '8px',
+                padding: '20px',
+                maxWidth: '94%',
+                width: '100%',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              }}>
+                {/* Response Headline */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800, color: msg.response.isSecurityBlock ? '#DC2626' : '#0F172A', letterSpacing: '-0.02em' }}>
+                    {msg.response.headline}
+                  </h3>
+                  <span style={{ fontSize: '10px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '4px', fontWeight: 600, flexShrink: 0 }}>
+                    {msg.response.periodUsed}
                   </span>
                 </div>
 
-                <h3 style={{
-                  fontSize: '17px',
-                  fontWeight: 800,
-                  color: '#0F172A',
-                  margin: '0 0 8px 0',
-                  letterSpacing: '-0.02em',
-                }}>
-                  {resp.headline}
-                </h3>
-
-                <p style={{
-                  margin: '0 0 12px 0',
-                  fontSize: '13px',
-                  color: '#334155',
-                  lineHeight: '1.6',
-                }}>
-                  {resp.summary}
+                {/* Summary */}
+                <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#334155', lineHeight: 1.6 }}>
+                  {msg.response.summary}
                 </p>
 
-                {/* Key Insights Bullet Cards */}
-                {resp.insights.length > 0 && (
-                  <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                    marginBottom: '16px',
-                  }}>
-                    {resp.insights.map((insight, idx) => (
-                      <div
-                        key={idx}
-                        style={{
-                          backgroundColor: '#F8FAFC',
-                          border: '1px solid #E2E8F0',
-                          borderRadius: '6px',
-                          padding: '8px 12px',
-                          fontSize: '12px',
-                          color: '#1E293B',
-                          fontWeight: 500,
-                        }}
-                      >
-                        {insight}
+                {/* Calculation Basis / Revenue Definition Note */}
+                {msg.response.calculationBasis && (
+                  <div style={{ padding: '8px 12px', backgroundColor: '#F8FAFC', borderRadius: '4px', borderLeft: '3px solid #10B981', fontSize: '11px', color: '#475569', marginBottom: '14px' }}>
+                    <strong>Calculation Basis & Definition:</strong> {msg.response.calculationBasis}
+                  </div>
+                )}
+
+                {/* Bullet Insights */}
+                {msg.response.insights && msg.response.insights.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '16px' }}>
+                    {msg.response.insights.map((insight, idx) => (
+                      <div key={idx} style={{ fontSize: '12px', color: '#1E293B', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                        <span>{insight}</span>
                       </div>
                     ))}
                   </div>
                 )}
 
-                {/* Evidence Card beneath answer */}
-                <EvidenceCard evidence={resp.evidence} />
+                {/* Evidence Card */}
+                {msg.response.evidence && (
+                  <EvidenceCard evidence={msg.response.evidence} />
+                )}
               </div>
-            </div>
-          )
-        })}
+            ) : null}
+          </div>
+        ))}
 
-        {/* Typing indicator */}
-        {isTyping && (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            color: '#64748B',
-            fontSize: '12px',
-            paddingLeft: '44px',
-          }}>
+        {/* Loading State Skeleton */}
+        {isLoading && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 700, color: '#64748B', marginBottom: '6px' }}>
+              <Bot size={12} />
+              <span>Analyzing Storecraft Controlled Analytics...</span>
+            </div>
             <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#10B981',
-              animation: 'pulse 1s infinite',
-            }} />
-            <span>Scanning live database & compiling evidence table...</span>
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #E2E8F0',
+              borderRadius: '8px',
+              padding: '16px 20px',
+              width: '280px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+            }}>
+              <div style={{ width: '16px', height: '16px', border: '2px solid #10B981', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '12px', color: '#475569', fontWeight: 600 }}>Executing read-only query...</span>
+            </div>
           </div>
         )}
 
         <div ref={chatEndRef} />
       </div>
 
-      {/* Input Form Bar */}
-      <form
-        onSubmit={handleSendCustom}
-        style={{
-          padding: '14px 20px',
-          backgroundColor: '#FFFFFF',
-          borderTop: '1px solid #E2E8F0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}
-      >
+      {/* Suggested Query Chips */}
+      <div style={{
+        padding: '12px 16px',
+        backgroundColor: '#FFFFFF',
+        borderTop: '1px solid #E2E8F0',
+        borderBottom: '1px solid #E2E8F0',
+      }}>
+        <div style={{ fontSize: '10px', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+          Suggested Analytics Questions (Task 11):
+        </div>
         <div style={{
-          flex: 1,
+          display: 'flex',
+          gap: '8px',
+          overflowX: 'auto',
+          paddingBottom: '4px',
+        }}>
+          {promptChips.map((chip) => {
+            const Icon = chip.icon
+            const isActive = activeChip === chip.id
+            return (
+              <button
+                key={chip.id}
+                onClick={() => sendQueryToServer(chip.query, chip.id)}
+                disabled={isLoading}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  backgroundColor: isActive ? chip.color : chip.bg,
+                  color: isActive ? '#FFFFFF' : chip.color,
+                  border: `1px solid ${chip.border}`,
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                  opacity: isLoading ? 0.6 : 1,
+                }}
+              >
+                <Icon size={12} />
+                <span>{chip.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Text Input Box */}
+      <form
+        onSubmit={handleCustomSubmit}
+        style={{
+          padding: '12px 16px',
+          backgroundColor: '#FFFFFF',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          backgroundColor: '#F8FAFC',
-          borderRadius: '6px',
-          border: '1px solid #CBD5E1',
-          padding: '8px 14px',
-        }}>
-          <Database size={16} color="#64748B" />
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder="Ask anything about inventory, orders, revenue, or fulfillment..."
-            style={{
-              flex: 1,
-              border: 'none',
-              backgroundColor: 'transparent',
-              outline: 'none',
-              fontSize: '13px',
-              color: '#0F172A',
-            }}
-          />
-        </div>
-
+        }}
+      >
+        <input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={`Ask a question about ${activeStore.name}'s revenue, inventory, or orders...`}
+          disabled={isLoading}
+          style={{
+            flex: 1,
+            padding: '10px 14px',
+            borderRadius: '6px',
+            border: '1px solid #CBD5E1',
+            fontSize: '12px',
+            outline: 'none',
+            color: '#0F172A',
+            backgroundColor: '#FFFFFF',
+          }}
+        />
         <button
           type="submit"
-          disabled={!inputValue.trim()}
+          disabled={!inputValue.trim() || isLoading}
+          className="button button-green"
           style={{
-            backgroundColor: inputValue.trim() ? '#10B981' : '#E2E8F0',
-            color: inputValue.trim() ? '#101828' : '#94A3B8',
-            border: 'none',
-            borderRadius: '6px',
             padding: '10px 18px',
-            fontSize: '12px',
-            fontWeight: 800,
-            cursor: inputValue.trim() ? 'pointer' : 'default',
+            fontSize: '11px',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            transition: 'all 0.15s ease',
+            opacity: !inputValue.trim() || isLoading ? 0.5 : 1,
           }}
         >
-          <span>Ask</span>
-          <Send size={13} />
+          <span>Ask Copilot</span>
+          <Send size={12} />
         </button>
       </form>
+      
+      {/* CSS Spinner Keyframes */}
+      <style jsx>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   )
 }
