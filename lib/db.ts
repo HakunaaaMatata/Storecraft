@@ -1,7 +1,8 @@
 import fs from 'fs'
 import path from 'path'
-import { INITIAL_STORES } from './seed-data'
+import { INITIAL_STORES, SAMPLE_CATEGORY_CATALOG } from './seed-data'
 import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId, User, Session, Product } from './types'
+import { cookies } from 'next/headers'
 
 interface DbSchema {
   stores: Store[]
@@ -113,7 +114,61 @@ export function getStoreBySlug(slug: string): Store | null {
   if (found) return found
 
   // Fallback for demo: if unknown slug, clone default store with requested slug and name
-  const fallbackStore = db.stores[0]
+  let fallbackStore = db.stores[0]
+  
+  // Try to use Vercel stateless session cookies if available
+  try {
+    const cookieStore = cookies()
+    const themeCookie = cookieStore.get('demo_store_theme')?.value
+    const businessTypeCookie = cookieStore.get('demo_business_type')?.value
+    const nameCookie = cookieStore.get('demo_store_name')?.value
+
+    if (themeCookie) {
+      const presetStore = db.stores.find(s => s.preset === themeCookie)
+      if (presetStore) fallbackStore = presetStore
+    }
+
+    if (fallbackStore) {
+      const clonedStore: Store = {
+        ...fallbackStore,
+        id: `store-${normalizedSlug}`,
+        slug: normalizedSlug,
+        name: nameCookie || (normalizedSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Store')
+      }
+
+      if (businessTypeCookie) {
+        clonedStore.businessType = businessTypeCookie
+        const templates = SAMPLE_CATEGORY_CATALOG[businessTypeCookie] || SAMPLE_CATEGORY_CATALOG['General Retail']
+        if (templates) {
+            let prodCounter = 1
+            clonedStore.products = templates.map(t => {
+                const p: Product = {
+                    id: `${normalizedSlug}-p${prodCounter}`,
+                    sku: `SKU-${normalizedSlug.substring(0, 3).toUpperCase()}-${100 + prodCounter}`,
+                    title: t.title,
+                    subtitle: t.subtitle,
+                    category: 'General',
+                    price: t.price,
+                    compareAtPrice: Math.round(t.price * 1.2),
+                    inventory: t.inventory,
+                    lowStockThreshold: 5,
+                    description: t.desc,
+                    features: ['Quality checked prior to fulfillment'],
+                    images: [t.img],
+                    variants: {},
+                }
+                prodCounter++
+                return p
+            })
+        }
+      }
+
+      return clonedStore
+    }
+  } catch (e) {
+    // cookies() might throw if not called in server context, ignore and fallback
+  }
+
   if (fallbackStore) {
     return {
       ...fallbackStore,
