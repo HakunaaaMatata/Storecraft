@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSessionUser } from '@/lib/auth'
 
 async function isAuthorizedForStore(userId: string, userEmail: string, storeSlug: string) {
-  const stores = getStoresByOwner(userId)
-  const allStores = getAllStores()
+  const stores = await getStoresByOwner(userId)
+  const allStores = await getAllStores()
   const matchingStores = allStores.filter(s => s.ownerEmail?.toLowerCase() === userEmail.toLowerCase() || s.ownerId === userId)
   const combined = [...stores, ...matchingStores]
   return combined.some(s => s.slug.toLowerCase() === storeSlug.toLowerCase() || s.id === storeSlug)
@@ -15,7 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const order = getOrderById(id)
+  const order = await getOrderById(id)
 
   if (!order) {
     return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -36,7 +36,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const order = getOrderById(id)
+    const order = await getOrderById(id)
 
     if (!order) {
       return NextResponse.json({ error: 'Order not found' }, { status: 404 })
@@ -55,7 +55,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Missing status field' }, { status: 400 })
     }
 
-    const result = updateOrderStatusServer(id, status, note)
+    const result = await updateOrderStatusServer(id, status, note)
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }

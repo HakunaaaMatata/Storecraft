@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
 
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
@@ -37,7 +37,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const currentStore = getStoreBySlug(slug)
+  const currentStore = await getStoreBySlug(slug)
   if (!currentStore) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -82,7 +82,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
 
-  const updated = updateStoreSettings(slug, updates)
+  const updated = await updateStoreSettings(slug, updates)
   if (!updated) {
     return NextResponse.json({ error: 'Failed to update store' }, { status: 500 })
   }

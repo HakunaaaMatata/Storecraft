@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
 
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
@@ -30,8 +30,8 @@ export async function GET(
   const url = new URL(request.url)
   const period = url.searchParams.get('period') || '30'
 
-  const allOrders = getOrdersByStore(slug)
-  const products = getProductsByStore(slug)
+  const allOrders = await getOrdersByStore(slug)
+  const products = await getProductsByStore(slug)
 
   let startDate: Date | null = null
   if (period === '7') {

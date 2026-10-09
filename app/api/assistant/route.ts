@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     let authorizedStoreId = 'store-northstar' // Default fallback store
 
     if (sessionData && sessionData.user) {
-      const userStores = getStoresByOwner(sessionData.user.id)
+      const userStores = await getStoresByOwner(sessionData.user.id)
       if (userStores.length > 0) {
         // If client specified a storeId, verify user ownership
         if (clientStoreId) {

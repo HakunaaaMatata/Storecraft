@@ -15,10 +15,10 @@ export async function GET() {
 
     const { user } = sessionData
     // Fetch stores associated with this owner
-    let stores = getStoresByOwner(user.id)
+    let stores = await getStoresByOwner(user.id)
     
     // Also include stores where ownerEmail matches
-    const allStores = getAllStores()
+    const allStores = await getAllStores()
     const matchingStores = allStores.filter(s => s.ownerEmail?.toLowerCase() === user.email.toLowerCase() || s.ownerId === user.id)
     
     // Deduplicate

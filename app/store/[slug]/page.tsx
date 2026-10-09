@@ -10,7 +10,7 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
 
   if (!store) {
     return {
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function StorePage({ params }: PageProps) {
   const { slug } = await params
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
 
   if (!store) {
     return (

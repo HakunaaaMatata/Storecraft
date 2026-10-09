@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
     let finalSlug = baseSlug
     let counter = 1
-    while (slugExists(finalSlug)) {
+    while (await slugExists(finalSlug)) {
       counter += 1
       finalSlug = `${baseSlug}-${counter}`
     }
@@ -190,7 +190,7 @@ export async function POST(request: Request) {
     }
 
     // 7. Persist to DB
-    const res = createStore(newStore)
+    const res = await createStore(newStore)
     if (!res.success) {
       return NextResponse.json({ success: false, error: res.error || 'Failed to save store' }, { status: 409 })
     }

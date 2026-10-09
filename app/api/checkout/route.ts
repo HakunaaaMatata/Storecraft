@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const result = createOrder({
+    const result = await createOrder({
       storeSlug,
       customer,
       paymentMethod,

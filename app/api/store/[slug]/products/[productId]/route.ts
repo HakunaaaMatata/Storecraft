@@ -9,7 +9,7 @@ export async function PUT(
   const { slug, productId } = await params
   const session = await getSessionUser()
   
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -21,7 +21,7 @@ export async function PUT(
   try {
     const data = await request.json()
     const product = { ...data, id: productId }
-    const result = saveProduct(slug, product)
+    const result = await saveProduct(slug, product)
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
@@ -38,7 +38,7 @@ export async function DELETE(
   const { slug, productId } = await params
   const session = await getSessionUser()
   
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -47,7 +47,7 @@ export async function DELETE(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const result = deleteProduct(slug, productId)
+  const result = await deleteProduct(slug, productId)
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 })
   }

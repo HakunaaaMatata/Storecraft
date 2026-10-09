@@ -3,6 +3,8 @@ import path from 'path'
 import { INITIAL_STORES, SAMPLE_CATEGORY_CATALOG } from './seed-data'
 import { CartItem, Order, OrderItem, ShippingAddress, Store, ThemePresetId, User, Session, Product } from './types'
 import { cookies } from 'next/headers'
+import { getDb, isMongoConfigured } from './mongodb'
+import { Db } from 'mongodb'
 
 interface DbSchema {
   stores: Store[]
@@ -14,7 +16,7 @@ interface DbSchema {
 const DATA_DIR = path.join(process.cwd(), 'data')
 const DB_FILE = path.join(DATA_DIR, 'storecraft-db.json')
 
-// In-memory cache
+// In-memory cache for fallback
 let memoryDb: DbSchema | null = null
 
 const DEFAULT_DEMO_USER: User = {
@@ -24,6 +26,34 @@ const DEFAULT_DEMO_USER: User = {
   passwordHash: 'dd79736083a9f0684080691cf3233a337c3ff22ee903b28f340d7769a0d224ed373cb0575f6df5932abc61bd46acc951e88c28c0c090aaceb1c428091ac3af94',
   salt: 'demo-salt-storecraft-2026',
   createdAt: '2026-01-01T00:00:00.000Z'
+}
+
+let isSeedingMongo = false
+
+async function ensureMongoSeed(db: Db): Promise<void> {
+  if (isSeedingMongo) return
+  try {
+    isSeedingMongo = true
+    const storeCount = await db.collection('stores').countDocuments()
+    if (storeCount === 0) {
+      const storesToSeed = INITIAL_STORES.map((s) => ({
+        ...s,
+        ownerId: s.ownerId || 'user-demo-jamie-davis',
+        ownerName: s.ownerName || 'Jamie Davis',
+        ownerEmail: s.ownerEmail || 'owner@storecraft.demo',
+      }))
+      await db.collection('stores').insertMany(storesToSeed as any)
+    }
+
+    const userCount = await db.collection('users').countDocuments()
+    if (userCount === 0) {
+      await db.collection('users').insertOne(DEFAULT_DEMO_USER as any)
+    }
+  } catch (err) {
+    console.warn('[MongoDB] Seed check warning:', err)
+  } finally {
+    isSeedingMongo = false
+  }
 }
 
 export function ensureDbFile(): DbSchema {
@@ -58,31 +88,31 @@ export function ensureDbFile(): DbSchema {
           parsed.users[demoUserIndex].salt = DEFAULT_DEMO_USER.salt
         }
         
-        persistDb(parsed)
         memoryDb = parsed
         return parsed
       }
     }
   } catch (err) {
-    console.warn('[DB] Error reading DB file, fallback:', err)
+    console.warn('[DB] Failed reading disk DB, falling back to memory seed:', err)
   }
 
-  if (memoryDb) {
-    return memoryDb
-  }
-
-  // Initialize with seed data
-  memoryDb = {
-    stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
-    orders: [],
-    users: [DEFAULT_DEMO_USER],
-    sessions: []
+  if (!memoryDb) {
+    memoryDb = {
+      stores: JSON.parse(JSON.stringify(INITIAL_STORES)),
+      orders: [],
+      users: [DEFAULT_DEMO_USER],
+      sessions: []
+    }
+    for (const s of memoryDb.stores) {
+      s.ownerId = 'user-demo-jamie-davis'
+      s.ownerName = 'Jamie Davis'
+      s.ownerEmail = 'owner@storecraft.demo'
+    }
   }
 
   persistDb(memoryDb)
   return memoryDb
 }
-
 
 function persistDb(data: DbSchema) {
   memoryDb = data
@@ -92,18 +122,39 @@ function persistDb(data: DbSchema) {
     }
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf-8')
   } catch (err) {
-    console.warn('[DB] Failed to persist file:', err)
+    // Expected on read-only serverless platforms like Vercel
   }
 }
 
-export function getAllStores(): Store[] {
+export async function getAllStores(): Promise<Store[]> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const stores = await mongo.collection<Store>('stores').find({}, { projection: { _id: 0 } }).toArray()
+      if (stores.length > 0) return stores
+    }
+  }
   const db = ensureDbFile()
   return db.stores
 }
 
-export function getStoreBySlug(slug: string): Store | null {
-  const db = ensureDbFile()
+export async function getStoreBySlug(slug: string): Promise<Store | null> {
   const normalizedSlug = slug.toLowerCase().trim()
+
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      let found = await mongo.collection<Store>('stores').findOne({ slug: normalizedSlug }, { projection: { _id: 0 } })
+      if (found) return found
+
+      found = await mongo.collection<Store>('stores').findOne({ preset: normalizedSlug }, { projection: { _id: 0 } })
+      if (found) return found
+    }
+  }
+
+  const db = ensureDbFile()
   
   // Exact match
   let found = db.stores.find((s) => s.slug.toLowerCase() === normalizedSlug)
@@ -116,9 +167,9 @@ export function getStoreBySlug(slug: string): Store | null {
   // Fallback for demo: if unknown slug, clone default store with requested slug and name
   let fallbackStore = db.stores[0]
   
-  // Try to use Vercel stateless session cookies if available
+  // Try to use stateless session cookies if available
   try {
-    const cookieStore = cookies()
+    const cookieStore = await cookies()
     const themeCookie = cookieStore.get('demo_store_theme')?.value
     let businessTypeCookie = cookieStore.get('demo_business_type')?.value
     const nameCookie = cookieStore.get('demo_store_name')?.value
@@ -136,10 +187,10 @@ export function getStoreBySlug(slug: string): Store | null {
         name: nameCookie || (normalizedSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) + ' Store')
       }
 
-      // Hardcoded hackathon bypass for cross-origin wildcard domains where cookies are lost
+      // Hardcoded hackathon bypass for cross-origin wildcard domains
       if (normalizedSlug.includes('lenovo') || normalizedSlug.includes('tech') || normalizedSlug.includes('apple')) {
-        businessTypeCookie = 'Technology & Electronics';
-        clonedStore.name = 'Lenovo Store';
+        businessTypeCookie = 'Technology & Electronics'
+        clonedStore.name = 'Lenovo Store'
       }
 
       if (businessTypeCookie) {
@@ -153,7 +204,7 @@ export function getStoreBySlug(slug: string): Store | null {
                     sku: `SKU-${normalizedSlug.substring(0, 3).toUpperCase()}-${100 + prodCounter}`,
                     title: t.title,
                     subtitle: t.subtitle,
-                    category: 'Featured', // Set all generated products to 'Featured' for the fallback
+                    category: 'Featured',
                     price: t.price,
                     compareAtPrice: Math.round(t.price * 1.2),
                     inventory: t.inventory,
@@ -166,7 +217,6 @@ export function getStoreBySlug(slug: string): Store | null {
                 prodCounter++
                 return p
             })
-            // Force the store categories to match the products so the UI doesn't break
             clonedStore.categories = ['All', 'Featured']
         }
       }
@@ -174,7 +224,7 @@ export function getStoreBySlug(slug: string): Store | null {
       return clonedStore
     }
   } catch (e) {
-    // cookies() might throw if not called in server context, ignore and fallback
+    // cookies() might throw outside request context
   }
 
   if (fallbackStore) {
@@ -189,31 +239,62 @@ export function getStoreBySlug(slug: string): Store | null {
   return null
 }
 
-export function updateStoreSettings(slug: string, updates: Partial<Store>): Store | null {
+export async function updateStoreSettings(slug: string, updates: Partial<Store>): Promise<Store | null> {
+  const normalizedSlug = slug.toLowerCase().trim()
+
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      await mongo.collection<Store>('stores').updateOne(
+        { slug: normalizedSlug },
+        { $set: updates }
+      )
+      return await mongo.collection<Store>('stores').findOne({ slug: normalizedSlug }, { projection: { _id: 0 } })
+    }
+  }
+
   const db = ensureDbFile()
-  const store = db.stores.find((s) => s.slug.toLowerCase() === slug.toLowerCase())
+  const store = db.stores.find((s) => s.slug.toLowerCase() === normalizedSlug)
   if (!store) return null
 
   Object.assign(store, updates)
-  
-  // Ensure we also save to memoryDB in case ensureDbFile is called again before persistence
   persistDb(db)
   return store
 }
 
-export function getAllOrders(): Order[] {
+export async function getAllOrders(): Promise<Order[]> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      return await mongo.collection<Order>('orders').find({}, { projection: { _id: 0 } }).toArray()
+    }
+  }
   const db = ensureDbFile()
   return db.orders
 }
 
-export function getOrderById(id: string): Order | null {
+export async function getOrderById(id: string): Promise<Order | null> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      return await mongo.collection<Order>('orders').findOne({ id }, { projection: { _id: 0 } })
+    }
+  }
   const db = ensureDbFile()
   return db.orders.find((o) => o.id === id) || null
 }
 
-export function getOrdersByStore(storeSlug: string): Order[] {
+export async function getOrdersByStore(storeSlug: string): Promise<Order[]> {
+  const normalized = storeSlug.toLowerCase().trim()
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      return await mongo.collection<Order>('orders').find({ storeSlug: normalized }, { projection: { _id: 0 } }).toArray()
+    }
+  }
   const db = ensureDbFile()
-  return db.orders.filter((o) => o.storeSlug.toLowerCase() === storeSlug.toLowerCase())
+  return db.orders.filter((o) => o.storeSlug.toLowerCase() === normalized)
 }
 
 export interface CreateOrderParams {
@@ -226,20 +307,18 @@ export interface CreateOrderParams {
 
 const idempotencyCache = new Map<string, Order>()
 
-export function createOrder({
+export async function createOrder({
   storeSlug,
   customer,
   paymentMethod,
   items,
   idempotencyKey
-}: CreateOrderParams): { success: boolean; order?: Order; error?: string } {
+}: CreateOrderParams): Promise<{ success: boolean; order?: Order; error?: string }> {
   if (idempotencyKey && idempotencyCache.has(idempotencyKey)) {
     return { success: true, order: idempotencyCache.get(idempotencyKey) }
   }
 
-  const db = ensureDbFile()
-  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
-    || db.stores[0] // fallback if dynamic slug
+  const store = await getStoreBySlug(storeSlug)
 
   if (!store) {
     return { success: false, error: 'Store not found' }
@@ -264,7 +343,6 @@ export function createOrder({
       }
     }
     
-    // Create a validated item using the server's price
     validatedItems.push({
       productId: item.productId,
       sku: product.sku || item.sku,
@@ -281,19 +359,19 @@ export function createOrder({
     })
   }
 
-  // 2. Decrement inventory in the database
+  // 2. Decrement inventory
   for (const item of items) {
     const product = store.products.find((p) => p.id === item.productId)!
     product.inventory = Math.max(0, product.inventory - item.quantity)
   }
 
-  // 3. Calculate order financials server-side
+  // 3. Financials
   const subtotal = validatedItems.reduce((sum, item) => sum + item.totalPrice, 0)
   const tax = Math.round(subtotal * 0.08 * 100) / 100
   const shipping = subtotal >= 100 ? 0 : 10
   const total = Math.round((subtotal + tax + shipping) * 100) / 100
 
-  // 4. Create Order record
+  // 4. Create Order
   const orderNumber = Math.floor(10000 + Math.random() * 90000)
   const newOrder: Order = {
     id: `SC-${orderNumber}`,
@@ -310,12 +388,27 @@ export function createOrder({
     status: 'Placed'
   }
 
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await mongo.collection<Order>('orders').insertOne(newOrder as any)
+      await mongo.collection<Store>('stores').updateOne(
+        { slug: store.slug },
+        { $set: { products: store.products } }
+      )
+    }
+  }
+
+  const db = ensureDbFile()
   db.orders.unshift(newOrder)
+  const memoryStore = db.stores.find((s) => s.slug.toLowerCase() === store.slug.toLowerCase())
+  if (memoryStore) {
+    memoryStore.products = store.products
+  }
   persistDb(db)
 
   if (idempotencyKey) {
     idempotencyCache.set(idempotencyKey, newOrder)
-    // Keep cache from growing indefinitely (optional for a hackathon, but good practice)
     if (idempotencyCache.size > 1000) {
       const firstKey = idempotencyCache.keys().next().value
       if (firstKey) idempotencyCache.delete(firstKey)
@@ -325,16 +418,37 @@ export function createOrder({
   return { success: true, order: newOrder }
 }
 
-export function updateOrderStatusServer(orderId: string, status: string, note?: string): { success: boolean; order?: Order; error?: string } {
-  const db = ensureDbFile()
-  const order = db.orders.find(o => o.id === orderId)
-  if (!order) return { success: false, error: 'Order not found' }
-
-  // We could add `canTransitionOrderStatus` from store-data.ts but simple validation suffices here:
+export async function updateOrderStatusServer(orderId: string, status: string, note?: string): Promise<{ success: boolean; order?: Order; error?: string }> {
   const validStatuses = ['Placed', 'Packed', 'Shipped', 'Delivered', 'Cancelled']
   if (!validStatuses.includes(status)) {
     return { success: false, error: 'Invalid status' }
   }
+
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      const order = await mongo.collection<Order>('orders').findOne({ id: orderId })
+      if (!order) return { success: false, error: 'Order not found' }
+
+      const statusHistory = order.statusHistory || []
+      statusHistory.unshift({
+        status: status as any,
+        timestamp: new Date().toISOString(),
+        note: note || `Updated to ${status}`
+      })
+
+      await mongo.collection<Order>('orders').updateOne(
+        { id: orderId },
+        { $set: { status: status as any, statusHistory } }
+      )
+      const updated = await mongo.collection<Order>('orders').findOne({ id: orderId }, { projection: { _id: 0 } })
+      return { success: true, order: updated || undefined }
+    }
+  }
+
+  const db = ensureDbFile()
+  const order = db.orders.find(o => o.id === orderId)
+  if (!order) return { success: false, error: 'Order not found' }
 
   order.status = status as any
   if (!order.statusHistory) order.statusHistory = []
@@ -373,18 +487,42 @@ export function resetDatabase() {
 }
 
 // User methods
-export function findUserByEmail(email: string): User | null {
-  const db = ensureDbFile()
+export async function findUserByEmail(email: string): Promise<User | null> {
   const normalized = email.toLowerCase().trim()
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const user = await mongo.collection<User>('users').findOne({ email: normalized }, { projection: { _id: 0 } })
+      if (user) return user
+    }
+  }
+  const db = ensureDbFile()
   return db.users.find((u) => u.email.toLowerCase().trim() === normalized) || null
 }
 
-export function findUserById(id: string): User | null {
+export async function findUserById(id: string): Promise<User | null> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const user = await mongo.collection<User>('users').findOne({ id }, { projection: { _id: 0 } })
+      if (user) return user
+    }
+  }
   const db = ensureDbFile()
   return db.users.find((u) => u.id === id) || null
 }
 
-export function createUser(user: User): User {
+export async function createUser(user: User): Promise<User> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      await mongo.collection<User>('users').insertOne(user as any)
+      return user
+    }
+  }
   const db = ensureDbFile()
   db.users.push(user)
   persistDb(db)
@@ -392,20 +530,41 @@ export function createUser(user: User): User {
 }
 
 // Session methods
-export function saveSession(session: Session): void {
+export async function saveSession(session: Session): Promise<void> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await mongo.collection<Session>('sessions').updateOne(
+        { token: session.token },
+        { $set: session },
+        { upsert: true }
+      )
+      return
+    }
+  }
   const db = ensureDbFile()
-  // Clean any old session for this token
   db.sessions = db.sessions.filter((s) => s.token !== session.token)
   db.sessions.push(session)
   persistDb(db)
 }
 
-export function findSession(token: string): Session | null {
+export async function findSession(token: string): Promise<Session | null> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      const found = await mongo.collection<Session>('sessions').findOne({ token }, { projection: { _id: 0 } })
+      if (!found) return null
+      if (new Date(found.expiresAt) < new Date()) {
+        await mongo.collection<Session>('sessions').deleteOne({ token })
+        return null
+      }
+      return found
+    }
+  }
   const db = ensureDbFile()
   const found = db.sessions.find((s) => s.token === token)
   if (!found) return null
 
-  // Check expiration
   if (new Date(found.expiresAt) < new Date()) {
     db.sessions = db.sessions.filter((s) => s.token !== token)
     persistDb(db)
@@ -415,23 +574,52 @@ export function findSession(token: string): Session | null {
   return found
 }
 
-export function deleteSession(token: string): void {
+export async function deleteSession(token: string): Promise<void> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await mongo.collection<Session>('sessions').deleteOne({ token })
+      return
+    }
+  }
   const db = ensureDbFile()
   db.sessions = db.sessions.filter((s) => s.token !== token)
   persistDb(db)
 }
 
 // Store methods
-export function slugExists(slug: string): boolean {
-  const db = ensureDbFile()
+export async function slugExists(slug: string): Promise<boolean> {
   const normalized = slug.toLowerCase().trim()
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const count = await mongo.collection<Store>('stores').countDocuments({ slug: normalized })
+      if (count > 0) return true
+    }
+  }
+  const db = ensureDbFile()
   return db.stores.some((s) => s.slug.toLowerCase().trim() === normalized)
 }
 
-export function createStore(store: Store): { success: boolean; store?: Store; error?: string } {
+export async function createStore(store: Store): Promise<{ success: boolean; store?: Store; error?: string }> {
+  const normalizedSlug = store.slug.toLowerCase().trim()
+
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const existing = await mongo.collection<Store>('stores').findOne({ slug: normalizedSlug })
+      if (existing) {
+        return { success: false, error: `Store with slug "${store.slug}" already exists.` }
+      }
+      await mongo.collection<Store>('stores').insertOne(store as any)
+      return { success: true, store }
+    }
+  }
+
   const db = ensureDbFile()
-  
-  if (slugExists(store.slug)) {
+  if (db.stores.some((s) => s.slug.toLowerCase().trim() === normalizedSlug)) {
     return { success: false, error: `Store with slug "${store.slug}" already exists.` }
   }
 
@@ -440,21 +628,27 @@ export function createStore(store: Store): { success: boolean; store?: Store; er
   return { success: true, store }
 }
 
-export function getStoresByOwner(ownerId: string): Store[] {
+export async function getStoresByOwner(ownerId: string): Promise<Store[]> {
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await ensureMongoSeed(mongo)
+      const stores = await mongo.collection<Store>('stores').find({ ownerId }, { projection: { _id: 0 } }).toArray()
+      if (stores && stores.length > 0) return stores
+    }
+  }
   const db = ensureDbFile()
   return db.stores.filter((s) => s.ownerId === ownerId)
 }
 
 // Product methods
-export function getProductsByStore(storeSlug: string): Product[] {
-  const db = ensureDbFile()
-  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+export async function getProductsByStore(storeSlug: string): Promise<Product[]> {
+  const store = await getStoreBySlug(storeSlug)
   return store?.products || []
 }
 
-export function saveProduct(storeSlug: string, product: Product): { success: boolean; error?: string } {
-  const db = ensureDbFile()
-  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+export async function saveProduct(storeSlug: string, product: Product): Promise<{ success: boolean; error?: string }> {
+  const store = await getStoreBySlug(storeSlug)
   if (!store) return { success: false, error: 'Store not found' }
 
   // Enforce unique SKU
@@ -470,17 +664,48 @@ export function saveProduct(storeSlug: string, product: Product): { success: boo
     store.products.unshift(product)
   }
 
-  persistDb(db)
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await mongo.collection<Store>('stores').updateOne(
+        { slug: store.slug.toLowerCase().trim() },
+        { $set: { products: store.products } }
+      )
+      return { success: true }
+    }
+  }
+
+  const db = ensureDbFile()
+  const memStore = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+  if (memStore) {
+    memStore.products = store.products
+    persistDb(db)
+  }
   return { success: true }
 }
 
-export function deleteProduct(storeSlug: string, productId: string): { success: boolean; error?: string } {
-  const db = ensureDbFile()
-  const store = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+export async function deleteProduct(storeSlug: string, productId: string): Promise<{ success: boolean; error?: string }> {
+  const store = await getStoreBySlug(storeSlug)
   if (!store) return { success: false, error: 'Store not found' }
 
   store.products = store.products.filter((p) => p.id !== productId)
-  persistDb(db)
+
+  if (isMongoConfigured()) {
+    const mongo = await getDb()
+    if (mongo) {
+      await mongo.collection<Store>('stores').updateOne(
+        { slug: store.slug.toLowerCase().trim() },
+        { $set: { products: store.products } }
+      )
+      return { success: true }
+    }
+  }
+
+  const db = ensureDbFile()
+  const memStore = db.stores.find((s) => s.slug.toLowerCase() === storeSlug.toLowerCase())
+  if (memStore) {
+    memStore.products = store.products
+    persistDb(db)
+  }
   return { success: true }
 }
-

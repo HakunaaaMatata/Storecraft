@@ -7,7 +7,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> }
 ) {
   const { slug } = await params
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -30,7 +30,7 @@ export async function POST(
   const { slug } = await params
   const session = await getSessionUser()
   
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -42,7 +42,7 @@ export async function POST(
   try {
     const data = await request.json()
     const product = { ...data, id: data.id || `prod-${Date.now()}` }
-    const result = saveProduct(slug, product)
+    const result = await saveProduct(slug, product)
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 })
     }
@@ -59,7 +59,7 @@ export async function PUT(
   const { slug } = await params
   const session = await getSessionUser()
   
-  const store = getStoreBySlug(slug)
+  const store = await getStoreBySlug(slug)
   if (!store) {
     return NextResponse.json({ error: 'Store not found' }, { status: 404 })
   }
@@ -75,7 +75,7 @@ export async function PUT(
       const existing = store.products.find(p => p.id === pid)
       if (existing) {
         const updated = { ...existing, ...updates }
-        saveProduct(slug, updated)
+        await saveProduct(slug, updated)
         updatedCount++
       }
     }

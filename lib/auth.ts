@@ -83,9 +83,9 @@ function verifyToken(token: string): any | null {
 /**
  * Create a stateless session token
  */
-export function createSessionForUser(userId: string): Session {
+export async function createSessionForUser(userId: string): Promise<Session> {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
-  const user = findUserById(userId)
+  const user = await findUserById(userId)
   
   const token = signToken({
     userId,
@@ -100,8 +100,7 @@ export function createSessionForUser(userId: string): Session {
     createdAt: new Date().toISOString(),
   }
   
-  // Try to save to JSON file just in case it's local, but it won't matter on Vercel
-  saveSession(session)
+  await saveSession(session)
   return session
 }
 

@@ -9,7 +9,7 @@ export async function POST() {
     const token = cookieStore.get(SESSION_COOKIE_NAME)?.value
 
     if (token) {
-      deleteSession(token)
+      await deleteSession(token)
     }
 
     // Clear session cookie

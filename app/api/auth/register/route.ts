@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
-    const existing = findUserByEmail(normalizedEmail)
+    const existing = await findUserByEmail(normalizedEmail)
     if (existing) {
       return NextResponse.json({
         success: false,
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
 
     // Securely hash password with unique salt
     const { hash, salt } = hashPassword(password)
-    const newUser = createUser({
+    const newUser = await createUser({
       id: `user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: name.trim(),
       email: normalizedEmail,
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     })
 
     // Create session and set cookie
-    const session = createSessionForUser(newUser.id)
+    const session = await createSessionForUser(newUser.id)
     const cookieStore = await cookies()
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
       httpOnly: true,

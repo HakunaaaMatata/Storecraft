@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.toLowerCase().trim()
-    const user = findUserByEmail(normalizedEmail)
+    const user = await findUserByEmail(normalizedEmail)
     if (!user) {
       return NextResponse.json({
         success: false,
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
     }
 
     // Create session & set cookie
-    const session = createSessionForUser(user.id)
+    const session = await createSessionForUser(user.id)
     const cookieStore = await cookies()
     cookieStore.set(SESSION_COOKIE_NAME, session.token, {
       httpOnly: true,
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       maxAge: 7 * 24 * 60 * 60,
     })
 
-    const userStores = getStoresByOwner(user.id)
+    const userStores = await getStoresByOwner(user.id)
     const primaryStore = userStores[0]
 
     return NextResponse.json({
