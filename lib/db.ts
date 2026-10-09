@@ -252,6 +252,42 @@ export function createOrder({
   return { success: true, order: newOrder }
 }
 
+export function updateOrderStatusServer(orderId: string, status: string, note?: string): { success: boolean; order?: Order; error?: string } {
+  const db = ensureDbFile()
+  const order = db.orders.find(o => o.id === orderId)
+  if (!order) return { success: false, error: 'Order not found' }
+
+  // We could add `canTransitionOrderStatus` from store-data.ts but simple validation suffices here:
+  const validStatuses = ['Placed', 'Packed', 'Shipped', 'Delivered', 'Cancelled']
+  if (!validStatuses.includes(status)) {
+    return { success: false, error: 'Invalid status' }
+  }
+
+  order.status = status as any
+  if (!order.statusHistory) order.statusHistory = []
+  order.statusHistory.unshift({ 
+    status: status as any, 
+    timestamp: new Date().toISOString(), 
+    note: note || `Updated to ${status}` 
+  })
+
+  // Restore inventory if cancelled
+  if (status === 'Cancelled') {
+    const store = db.stores.find(s => s.slug.toLowerCase() === order.storeSlug.toLowerCase())
+    if (store) {
+      for (const item of order.items) {
+        const product = store.products.find(p => p.id === item.productId)
+        if (product) {
+          product.inventory += item.quantity
+        }
+      }
+    }
+  }
+
+  persistDb(db)
+  return { success: true, order }
+}
+
 export function resetDatabase() {
   const db: DbSchema = {
     stores: JSON.parse(JSON.stringify(INITIAL_STORES)),

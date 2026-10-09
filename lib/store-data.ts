@@ -430,6 +430,23 @@ class StorecraftDatabase {
     order.status = status
     if (!order.statusHistory) order.statusHistory = []
     order.statusHistory.unshift({ status, timestamp: new Date().toISOString(), note: note || `Updated to ${status}` })
+    
+    // If cancelled, restore inventory
+    if (status === 'Cancelled') {
+      const allProducts = this.getProducts()
+      let productsUpdated = false
+      for (const item of order.items) {
+        const product = allProducts.find(p => p.id === item.productId && p.storeId === order.storeId)
+        if (product) {
+          product.stock += item.quantity
+          productsUpdated = true
+        }
+      }
+      if (productsUpdated && this.isBrowser()) {
+        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(allProducts))
+      }
+    }
+
     if (this.isBrowser()) {
       localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(all))
       this.dispatchUpdate()

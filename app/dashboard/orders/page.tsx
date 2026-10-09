@@ -478,6 +478,13 @@ function OrdersContent() {
                 <div style={{ color: 'var(--slate)', display: 'flex', flexDirection: 'column', gap: '3px', fontSize: '11px' }}>
                   <span>Email: {selectedOrder.customer.email}</span>
                   <span>Phone: {selectedOrder.customer.phone || 'Not provided'}</span>
+                  <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#FFFBEB', borderRadius: '4px', border: '1px solid #FEF3C7', color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                    <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <p style={{ margin: 0, lineHeight: 1.4 }}>
+                      <strong>Email/SMS notifications are not configured.</strong><br/>
+                      The customer will not receive automated updates for status changes. They must check their tracking link manually.
+                    </p>
+                  </div>
                   <span>Address: {selectedOrder.customer.address || 'Not provided'}</span>
                 </div>
               </div>
