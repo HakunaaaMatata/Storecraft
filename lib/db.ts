@@ -19,8 +19,8 @@ let memoryDb: DbSchema | null = null
 const DEFAULT_DEMO_USER: User = {
   id: 'user-demo-jamie-davis',
   name: 'Jamie Davis',
-  email: 'demo@storecraft.com',
-  passwordHash: '4c99de07bfb04d6b05259fe8d3ca9f463f67d3210580b2a9a2afd4533bd3f0c10ae5d03d59a827a8736c25b2b96268c27a4295c1b766b119f61016afd603e1c9',
+  email: 'owner@storecraft.demo', // Match UI exactly
+  passwordHash: 'dd79736083a9f0684080691cf3233a337c3ff22ee903b28f340d7769a0d224ed373cb0575f6df5932abc61bd46acc951e88c28c0c090aaceb1c428091ac3af94',
   salt: 'demo-salt-storecraft-2026',
   createdAt: '2026-01-01T00:00:00.000Z'
 }
@@ -42,13 +42,21 @@ export function ensureDbFile(): DbSchema {
           if (!s.ownerId) {
             s.ownerId = 'user-demo-jamie-davis'
             s.ownerName = s.ownerName || 'Jamie Davis'
-            s.ownerEmail = s.ownerEmail || 'demo@storecraft.com'
+            s.ownerEmail = s.ownerEmail || 'owner@storecraft.demo'
           }
         }
         if (!parsed.orders) parsed.orders = []
-        if (!parsed.users.some((u: User) => u.email === 'demo@storecraft.com')) {
+        
+        // Ensure demo user exists and has correct password hash
+        const demoUserIndex = parsed.users.findIndex((u: User) => u.email === 'demo@storecraft.com' || u.email === 'owner@storecraft.demo')
+        if (demoUserIndex === -1) {
           parsed.users.push(DEFAULT_DEMO_USER)
+        } else {
+          parsed.users[demoUserIndex].email = 'owner@storecraft.demo'
+          parsed.users[demoUserIndex].passwordHash = DEFAULT_DEMO_USER.passwordHash
+          parsed.users[demoUserIndex].salt = DEFAULT_DEMO_USER.salt
         }
+        
         persistDb(parsed)
         memoryDb = parsed
         return parsed
