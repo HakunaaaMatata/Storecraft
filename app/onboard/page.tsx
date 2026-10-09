@@ -172,7 +172,6 @@ export default function OnboardPage() {
         featured: i < 3
       }))
       dummyProducts.forEach(p => db.saveProduct(p))
-<<<<<<< HEAD
     } else if (formData.productsOption === 'csv' && uploadedProducts.length > 0) {
       uploadedProducts.forEach((p, i) => {
         db.saveProduct({
@@ -181,23 +180,15 @@ export default function OnboardPage() {
           storeId: newStoreId
         })
       })
-=======
-      
-      // Sync with server DB so the public storefront can render it immediately
-      fetch('/api/sync-onboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store: newStore, products: dummyProducts })
-      }).catch(e => console.warn('Failed to sync to server DB', e))
-    } else {
-      // Sync store even if no dummy products
-      fetch('/api/sync-onboard', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store: newStore, products: [] })
-      }).catch(e => console.warn('Failed to sync to server DB', e))
->>>>>>> a412d8948cebfc156339f2f1431a38fe520bd292
     }
+
+    // Sync with server DB so the public storefront can render it immediately
+    const productsToSync = formData.productsOption === 'sample' ? db.getProducts(newStoreId) : (formData.productsOption === 'csv' ? uploadedProducts : [])
+    fetch('/api/sync-onboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ store: newStore, products: productsToSync })
+    }).catch(e => console.warn('Failed to sync to server DB', e))
 
     localStorage.removeItem('storecraft_onboarding_state')
 
