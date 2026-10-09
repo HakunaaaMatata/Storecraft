@@ -322,16 +322,35 @@ export default function DashboardOverviewPage() {
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontWeight: 800, color: '#0F172A' }}>${o.total.toFixed(2)}</div>
-                        <span style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          padding: '2px 6px',
-                          borderRadius: '10px',
-                          backgroundColor: o.status === 'Delivered' ? '#DCFCE7' : '#FEF3C7',
-                          color: o.status === 'Delivered' ? '#166534' : '#92400E',
-                        }}>
-                          {o.status}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginTop: '4px' }}>
+                          <span style={{
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 6px',
+                            borderRadius: '10px',
+                            backgroundColor: o.status === 'Delivered' ? '#DCFCE7' : '#FEF3C7',
+                            color: o.status === 'Delivered' ? '#166534' : '#92400E',
+                          }}>
+                            {o.status}
+                          </span>
+                          {o.status !== 'Delivered' && o.status !== 'Cancelled' && (
+                            <button
+                              onClick={() => actions.updateOrderStatus(o.id, 'Delivered')}
+                              style={{
+                                fontSize: '9px',
+                                padding: '2px 6px',
+                                backgroundColor: '#10B981',
+                                color: '#FFF',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                border: 'none'
+                              }}
+                            >
+                              Mark Delivered
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}

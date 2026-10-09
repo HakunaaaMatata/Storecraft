@@ -14,10 +14,62 @@ const steps = [
 ]
 
 const themes = [
-  { name: 'Atelier', type: 'Editorial fashion', bg: '#f0e9e0', ink: '#2f2924', accent: '#a86043', image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85' },
-  { name: 'Market', type: 'Local & grocery', bg: '#e9efdf', ink: '#203126', accent: '#7a9b58', image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=85' },
-  { name: 'Forma', type: 'Home & lifestyle', bg: '#e8e8e6', ink: '#202124', accent: '#80847f', image: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=900&q=85' },
-  { name: 'Circuit', type: 'Technology', bg: '#172028', ink: '#f7faf8', accent: '#10b981', image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=85' },
+  { 
+    name: 'Atelier', 
+    type: 'Editorial fashion', 
+    desc: 'Elegant, luxurious typography with breathable spacing and muted warm tones. Designed to put high-end apparel and lookbooks center stage.',
+    bg: '#FAF8F5', 
+    surface: '#FFFFFF',
+    ink: '#1A1817', 
+    accent: '#8C6C5D', 
+    fontBody: 'var(--font-sans)',
+    fontHeading: 'var(--font-serif)',
+    image: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=900&q=85',
+    radius: '0px',
+    layout: 'grid-cols-2'
+  },
+  { 
+    name: 'Market', 
+    type: 'Local & grocery', 
+    desc: 'Lively, friendly, and densely packed. Market uses organic greens and sturdy typography to showcase fresh goods and daily staples.',
+    bg: '#F3F5EF', 
+    surface: '#FFFFFF',
+    ink: '#1E2C22', 
+    accent: '#648A4F', 
+    fontBody: 'var(--font-sans)',
+    fontHeading: 'var(--font-sans)',
+    image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=900&q=85',
+    radius: '12px',
+    layout: 'grid-cols-3'
+  },
+  { 
+    name: 'Forma', 
+    type: 'Home & lifestyle', 
+    desc: 'Clean, architectural, and restrained. Forma balances stark monochrome layouts with emerald accents for design-forward homewares.',
+    bg: '#F9F9F9', 
+    surface: '#FFFFFF',
+    ink: '#111210', 
+    accent: '#10B981', 
+    fontBody: 'var(--font-sans)',
+    fontHeading: 'var(--font-serif)',
+    image: 'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=900&q=85',
+    radius: '4px',
+    layout: 'grid-cols-2'
+  },
+  { 
+    name: 'Circuit', 
+    type: 'Technology', 
+    desc: 'Bold, dark, and high-contrast. Circuit utilizes neon accents and dense, technical layouts built for contemporary streetwear and hardware.',
+    bg: '#0F1115', 
+    surface: '#1A1D24',
+    ink: '#FFFFFF', 
+    accent: '#00F0FF', 
+    fontBody: 'var(--font-sans)',
+    fontHeading: 'var(--font-sans)',
+    image: 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?auto=format&fit=crop&w=900&q=85',
+    radius: '2px',
+    layout: 'grid-cols-3'
+  },
 ]
 
 function Brand({ compact = false }: { compact?: boolean }) {
@@ -34,8 +86,71 @@ function ProductPreview() {
   </div>
 }
 
-function ThemePreview({ theme, active, onClick }: { theme: typeof themes[number], active: boolean, onClick: () => void }) {
-  return <button className={`theme-card ${active ? 'selected' : ''}`} onClick={onClick} style={{ '--theme-bg': theme.bg, '--theme-ink': theme.ink, '--theme-accent': theme.accent, '--theme-image': `url(${theme.image})` } as React.CSSProperties}><div className="theme-image" style={{ backgroundImage: `url(${theme.image})` }}><div className="theme-window"><span>{theme.name}</span><div className="theme-nav"><i /><i /><i /></div><div className="theme-product" style={{ backgroundImage: `linear-gradient(180deg, transparent 45%, rgba(0,0,0,.38)), url(${theme.image})` }}><div><small>NEW COLLECTION</small><b>Objects with<br />a point of view.</b><em>Shop collection →</em></div></div></div></div><div className="theme-meta"><div><strong>{theme.name}</strong><span>{theme.type}</span></div>{active ? <span className="check"><Check /></span> : <ChevronRight />}</div></button>
+function DynamicStorefrontPreview({ theme }: { theme: typeof themes[number] }) {
+  return (
+    <div 
+      className="w-full max-w-[800px] aspect-[4/3] flex flex-col overflow-hidden transition-all duration-1000 motion-reduce:transition-none ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none shadow-2xl relative mx-auto"
+      style={{
+        backgroundColor: theme.bg,
+        color: theme.ink,
+        fontFamily: theme.fontBody,
+        borderRadius: '16px',
+        border: '1px solid color-mix(in srgb, var(--color-ink) 10%, transparent)',
+      }}
+    >
+      <div className="h-10 w-full flex items-center px-4 gap-2 border-b transition-colors duration-1000 z-10 relative shrink-0" style={{ backgroundColor: theme.surface, borderColor: 'color-mix(in srgb, currentColor 10%, transparent)' }}>
+         <div className="flex gap-1.5">
+           <div className="w-2.5 h-2.5 rounded-full bg-current opacity-20" />
+           <div className="w-2.5 h-2.5 rounded-full bg-current opacity-20" />
+           <div className="w-2.5 h-2.5 rounded-full bg-current opacity-20" />
+         </div>
+         <div className="mx-auto text-[10px] font-medium opacity-50">storecraft.com/{theme.name.toLowerCase()}</div>
+      </div>
+      
+      <div className="px-8 py-5 flex justify-between items-center z-10 relative shrink-0">
+         <h1 className="text-2xl transition-all duration-1000 motion-reduce:transition-none" style={{ fontFamily: theme.fontHeading, fontWeight: theme.name === 'Circuit' || theme.name === 'Market' ? 800 : 400 }}>{theme.name}</h1>
+         <nav className="flex gap-4 text-[11px] font-bold uppercase tracking-wider opacity-80">
+            <span className="hidden sm:inline">Shop</span>
+            <span className="hidden sm:inline">About</span>
+            <ShoppingBag className="w-4 h-4" />
+         </nav>
+      </div>
+
+      <div className="w-full relative shrink-0 transition-all duration-1000 motion-reduce:transition-none" style={{ height: theme.name === 'Atelier' ? '50%' : '35%' }}>
+         <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000 motion-reduce:transition-none" style={{ backgroundImage: `url(${theme.image})` }} />
+         <div className="absolute inset-0 transition-all duration-1000 motion-reduce:transition-none" style={{ background: `linear-gradient(to top, ${theme.bg}, transparent)` }} />
+      </div>
+
+      <div className="p-4 sm:p-8 flex-1 overflow-hidden z-10 relative flex flex-col">
+         <div className="flex justify-between items-end mb-4 shrink-0">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider transition-colors duration-1000" style={{ color: theme.accent }}>New Arrivals</h2>
+         </div>
+         <div className={`grid ${theme.layout} gap-4 sm:gap-6 transition-all duration-1000 motion-reduce:transition-none h-full`}>
+            {[1,2,3].map(i => (
+              <div key={i} className="flex flex-col gap-3 transition-all duration-1000 motion-reduce:transition-none overflow-hidden"
+                   style={{ 
+                     backgroundColor: theme.surface,
+                     borderRadius: theme.radius,
+                     border: theme.name === 'Market' || theme.name === 'Circuit' ? `1px solid color-mix(in srgb, currentColor 10%, transparent)` : 'none',
+                     boxShadow: theme.name === 'Forma' ? '0 10px 30px rgba(0,0,0,0.03)' : 'none',
+                     padding: theme.name === 'Market' || theme.name === 'Circuit' ? '12px' : '0'
+                   }}>
+                <div className="w-full flex-1 min-h-[80px] transition-all duration-1000 motion-reduce:transition-none bg-current opacity-5" style={{ borderRadius: theme.name === 'Circuit' ? '0' : theme.radius }} />
+                <div className="px-1 flex justify-between items-start shrink-0">
+                  <div className="space-y-1.5 w-full">
+                    <div className="h-2 w-2/3 bg-current opacity-20 rounded" />
+                    <div className="h-2 w-1/3 bg-current opacity-20 rounded" />
+                  </div>
+                  <div className="w-6 h-6 shrink-0 flex items-center justify-center rounded-full transition-all duration-1000 motion-reduce:transition-none hidden sm:flex" style={{ backgroundColor: theme.accent, color: theme.surface }}>
+                    <Plus className="w-3 h-3" />
+                  </div>
+                </div>
+              </div>
+            ))}
+         </div>
+      </div>
+    </div>
+  )
 }
 
 function DashboardView() {
@@ -76,11 +191,59 @@ export default function Page() {
     <section id="top" className="hero"><motion.div className="hero-copy" style={{ y: heroY }}><div className="announcement"><span />A better way to sell online</div><h1>Your next big business <em>starts with a store.</em></h1><p>Create a beautiful online store, manage your products, and understand your sales — all from one simple platform.</p><div className="hero-actions"><a className="button button-green" href="/onboard">Build your store <ArrowRight /></a><a className="play-link" href="#product"><span><Play /></span> Explore the experience</a></div><div className="hero-note"><span className="avatar-stack"><i /><i /><i /></span><span>Built for the businesses<br />ready for what’s next.</span></div></motion.div><motion.div className="hero-visual" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .25, duration: .8 }}><ProductPreview /></motion.div></section>
     <section className="logo-strip"><span>One platform for every part of your business</span><div><strong>northstar</strong><strong>FIELDNOTE</strong><strong>MADEWELL</strong><strong>LANDMARK</strong><strong>ORIGIN</strong></div></section>
     <section id="product" className="story-section"><div className="section-intro"><p className="eyebrow">From first idea to first order</p><h2>Everything you need to <em>move forward.</em></h2><p>StoreCraft brings your products, storefront, and business intelligence into one beautifully simple workspace.</p></div><div className="story-layout"><div className="story-steps">{steps.map((step, i) => <div className={`story-step ${i === 0 ? 'active' : ''}`} key={step.label}><span>{step.eyebrow}</span><div><step.icon /><h3>{step.label}</h3><p>{step.copy}</p></div></div>)}</div><div className="story-device"><div className="device-bar"><span>StoreCraft studio</span><span>Live preview <i /></span></div><div className="device-content"><div className="device-top"><div><small>01 / BUSINESS SETUP</small><h3>Tell us about<br /><em>your business.</em></h3><p>We’ll tailor your StoreCraft experience to help your unique point of view shine through.</p><a href="/onboard" className="button button-green">Get started <ArrowRight /></a></div><div className="setup-card"><div className="mini-logo"><div className="brand-mark"><span /></div></div><small>YOUR STORE NAME</small><strong>Northstar Goods</strong><div className="fake-input" /><div className="fake-input short" /></div></div></div></div></div></section>
-    <section id="themes" ref={themesRef} style={{ height: '300vh', position: 'relative' }}>
-      <div className="themes-section" style={{ position: 'sticky', top: 0, height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div className="section-intro centered"><p className="eyebrow">A point of view, built in</p><h2>Make it <em>yours.</em></h2><p>Four thoughtfully designed starting points. Every one is ready to carry your brand into the world.</p></div>
-        <div className="theme-grid">{themes.map((theme, i) => <ThemePreview key={theme.name} theme={theme} active={i === themeIndex} onClick={() => setThemeIndex(i)} />)}</div>
-        <div className="theme-cta"><span>Currently exploring <strong>{themes[themeIndex].name}</strong></span><div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}><a href={`/store/${themes[themeIndex].name.toLowerCase()}`} className="button button-green" style={{ padding: '8px 14px', fontSize: '11px' }}>Open {themes[themeIndex].name} Storefront <ArrowRight /></a><a className="button button-dark" href="/dashboard/theme" style={{ padding: '8px 14px', fontSize: '11px' }}>Customize theme <ArrowRight /></a></div></div>
+    <section id="themes" ref={themesRef} className="relative h-[400vh]">
+      <div className="sticky top-0 h-screen w-full overflow-hidden flex flex-col md:flex-row items-center py-20 px-6 md:px-16 gap-12 bg-white">
+        
+        {/* Text Content */}
+        <div className="flex-1 max-w-lg relative z-10 flex flex-col h-full justify-center">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-[#10B981] mb-6">A point of view, built in</p>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif tracking-tight text-ink mb-6">Make it <em>yours.</em></h2>
+          <p className="text-[15px] md:text-[17px] text-muted-foreground leading-relaxed mb-12">
+            Every business has a soul. StoreCraft gives you four meticulously crafted starting points designed to put your products in their best light.
+          </p>
+
+          <div className="space-y-8">
+            <div className="relative">
+              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200" />
+              <motion.div 
+                className="absolute left-0 top-0 w-0.5 bg-[#10B981]" 
+                style={{ height: `${(themeIndex + 1) * 25}%`, transition: 'height 0.3s ease' }} 
+              />
+              
+              <div className="pl-6 relative">
+                 <AnimatePresence mode="wait">
+                   <motion.div
+                     key={themeIndex}
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     exit={{ opacity: 0, y: -10 }}
+                     transition={{ duration: 0.3 }}
+                   >
+                     <h3 className="text-xl font-bold text-ink">{themes[themeIndex].name} — {themes[themeIndex].type}</h3>
+                     <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                       {themes[themeIndex].desc}
+                     </p>
+                   </motion.div>
+                 </AnimatePresence>
+              </div>
+            </div>
+
+            <div className="pl-6 flex flex-wrap gap-3">
+              <a href={`/store/${themes[themeIndex].name.toLowerCase()}`} className="button button-green inline-flex px-5 py-3 text-xs">
+                Preview {themes[themeIndex].name} <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+              <a href="/dashboard/theme" className="button button-dark inline-flex px-5 py-3 text-xs bg-ink text-white">
+                Customize Theme <ArrowRight className="w-4 h-4 ml-2" />
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Preview Window */}
+        <div className="flex-1 w-full h-full min-h-[400px] md:min-h-0 flex items-center justify-center relative">
+          <DynamicStorefrontPreview theme={themes[themeIndex]} />
+        </div>
+
       </div>
     </section>
     <section id="features" className="import-section"><div className="import-copy"><p className="eyebrow">Ready when your catalog is</p><h2>From spreadsheet<br />to <em>storefront.</em></h2><p>Bring your products with you. Our thoughtful import flow does the busywork and leaves you in control.</p><a className="text-link" href="/onboard">See how importing works <ArrowRight /></a></div><div className="import-window"><div className="import-top"><div><span className="file-icon">.CSV</span><div><strong>products_october.csv</strong><small>84 products · Updated just now</small></div></div><span className="import-status"><Check /> Ready to import</span></div><div className="mapping"><p>Map your columns</p><span>We found a match for every required field.</span><div className="mapping-row"><b>Product name</b><ChevronRight /><span>product_title</span><Check /></div><div className="mapping-row"><b>Price</b><ChevronRight /><span>retail_price</span><Check /></div><div className="mapping-row"><b>Inventory</b><ChevronRight /><span>stock_count</span><Check /></div><a href="/onboard" className="button button-green full" style={{ marginTop: '17px', textAlign: 'center' }}>Import 84 products <ArrowRight /></a></div></div></section>

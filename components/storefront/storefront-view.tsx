@@ -206,6 +206,65 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
     setCart([])
     // 2. Refresh store products to update remaining inventory in the UI
     refreshStoreData()
+    
+    // 3. Bridge the API-created order into the Dashboard's client-side localStorage DB
+    try {
+      // Map API Order to Dashboard Order format
+      const dashboardOrder = {
+        id: order.id,
+        storeId: store.id, // Using store.id instead of slug
+        orderNumber: order.id.replace('SC-', '#'),
+        customer: {
+          name: order.customer.fullName,
+          email: order.customer.email,
+          phone: order.customer.phone || '',
+          address: `${order.customer.address}, ${order.customer.city}, ${order.customer.state} ${order.customer.postalCode}`
+        },
+        items: order.items.map(i => ({
+          productId: i.productId,
+          name: i.title,
+          price: i.unitPrice,
+          quantity: i.quantity,
+          selectedVariant: i.selectedVariants?.size || i.selectedVariants?.color || undefined,
+          image: i.image
+        })),
+        subtotal: order.subtotal,
+        tax: order.tax,
+        shipping: order.shipping,
+        total: order.total,
+        status: 'Placed',
+        paymentStatus: 'Paid (Demo)',
+        statusHistory: [{ status: 'Placed', timestamp: order.createdAt, note: 'Order received via public storefront' }],
+        createdAt: order.createdAt
+      };
+
+      const rawOrders = localStorage.getItem('storecraft_orders_v1');
+      const orders = rawOrders ? JSON.parse(rawOrders) : [];
+      orders.unshift(dashboardOrder);
+      localStorage.setItem('storecraft_orders_v1', JSON.stringify(orders));
+
+      // Also deduct inventory in the dashboard's product DB
+      const rawProducts = localStorage.getItem('storecraft_products_v1');
+      if (rawProducts) {
+        const products = JSON.parse(rawProducts);
+        let updated = false;
+        order.items.forEach(item => {
+          const p = products.find((p: any) => p.id === item.productId && p.storeId === store.id);
+          if (p) {
+            p.stock = Math.max(0, p.stock - item.quantity);
+            updated = true;
+          }
+        });
+        if (updated) {
+          localStorage.setItem('storecraft_products_v1', JSON.stringify(products));
+        }
+      }
+      
+      // Dispatch event to trigger useStorecraft refresh in other tabs
+      window.dispatchEvent(new CustomEvent('storecraft_db_update'));
+    } catch (e) {
+      console.warn('Failed to sync order to dashboard DB', e);
+    }
   }
 
   // Scrolling

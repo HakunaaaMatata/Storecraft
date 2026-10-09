@@ -121,6 +121,20 @@ export default function OnboardPage() {
         featured: i < 3
       }))
       dummyProducts.forEach(p => db.saveProduct(p))
+      
+      // Sync with server DB so the public storefront can render it immediately
+      fetch('/api/sync-onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store: newStore, products: dummyProducts })
+      }).catch(e => console.warn('Failed to sync to server DB', e))
+    } else {
+      // Sync store even if no dummy products
+      fetch('/api/sync-onboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ store: newStore, products: [] })
+      }).catch(e => console.warn('Failed to sync to server DB', e))
     }
 
     localStorage.removeItem('storecraft_onboarding_state')
