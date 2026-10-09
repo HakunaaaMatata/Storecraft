@@ -1,8 +1,8 @@
+import { Suspense } from 'react'
 import { StorefrontView } from '@/components/storefront/storefront-view'
 import { getStoreBySlug } from '@/lib/db'
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { notFound } from 'next/navigation'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -85,5 +85,9 @@ export default async function StorePage({ params }: PageProps) {
     )
   }
 
-  return <StorefrontView initialStore={store} />
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-slate-400 text-sm font-semibold uppercase tracking-wider">Loading Store...</div>}>
+      <StorefrontView initialStore={store} />
+    </Suspense>
+  )
 }

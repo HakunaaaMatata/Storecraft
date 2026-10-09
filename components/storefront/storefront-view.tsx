@@ -2,7 +2,8 @@
 
 import { THEME_PRESETS } from '@/lib/theme-presets'
 import { CartItem, Order, Product, Store, ThemePresetId } from '@/lib/types'
-import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
+import { useEffect, useState, useCallback } from 'react'
 import { CartDrawer } from './cart-drawer'
 import { CheckoutModal } from './checkout-modal'
 import { ProductDrawer } from './product-drawer'
@@ -16,18 +17,41 @@ interface StorefrontViewProps {
 }
 
 export function StorefrontView({ initialStore }: StorefrontViewProps) {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+
+  const createQueryString = useCallback(
+    (name: string, value: string) => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (value) {
+        params.set(name, value)
+      } else {
+        params.delete(name)
+      }
+      return params.toString()
+    },
+    [searchParams]
+  )
+
   // Store and Theme Preset state
   const [store, setStore] = useState<Store>(initialStore)
   const [currentPreset, setCurrentPreset] = useState<ThemePresetId>(initialStore.preset)
   const theme = THEME_PRESETS[currentPreset] || THEME_PRESETS.forma
 
   // Filters & Search
-  const [activeCategory, setActiveCategory] = useState('All')
-  const [searchQuery, setSearchQuery] = useState('')
+  const initialCategory = searchParams.get('category') || 'All'
+  const initialSearch = searchParams.get('search') || ''
+  
+  const [activeCategory, setActiveCategory] = useState(initialCategory)
+  const [searchQuery, setSearchQuery] = useState(initialSearch)
 
   // Drawers and Modals
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(false)
+  const productIdFromUrl = searchParams.get('product')
+  const initialProduct = productIdFromUrl ? initialStore.products.find(p => p.id === productIdFromUrl) || null : null
+
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(initialProduct)
+  const [isProductDrawerOpen, setIsProductDrawerOpen] = useState(!!initialProduct)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false)
 
@@ -99,6 +123,29 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
     } catch (e) {
       console.warn(e)
     }
+  }
+
+  // URL State Handlers
+  const handleCategorySelect = (category: string) => {
+    setActiveCategory(category)
+    router.push(pathname + '?' + createQueryString('category', category === 'All' ? '' : category), { scroll: false })
+  }
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query)
+    router.push(pathname + '?' + createQueryString('search', query), { scroll: false })
+  }
+
+  const handleSelectProduct = (product: Product) => {
+    setSelectedProduct(product)
+    setIsProductDrawerOpen(true)
+    router.push(pathname + '?' + createQueryString('product', product.id), { scroll: false })
+  }
+
+  const handleCloseProductDrawer = () => {
+    setIsProductDrawerOpen(false)
+    router.push(pathname + '?' + createQueryString('product', ''), { scroll: false })
+    setTimeout(() => setSelectedProduct(null), 300) // Clear after animation
   }
 
   // Cart Operations
@@ -303,9 +350,9 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
         cartTotal={cartTotal}
         onOpenCart={() => setIsCartOpen(true)}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
+        onSearchChange={handleSearchChange}
         activeCategory={activeCategory}
-        onCategorySelect={setActiveCategory}
+        onCategorySelect={handleCategorySelect}
       />
 
       {/* 3. Hero Visuals */}
@@ -321,13 +368,10 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
         theme={theme}
         categories={store.categories}
         activeCategory={activeCategory}
-        onCategorySelect={setActiveCategory}
+        onCategorySelect={handleCategorySelect}
         searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        onSelectProduct={(product) => {
-          setSelectedProduct(product)
-          setIsProductDrawerOpen(true)
-        }}
+        onSearchChange={handleSearchChange}
+        onSelectProduct={handleSelectProduct}
         onInstantAddToCart={handleInstantAddToCart}
       />
 
@@ -336,7 +380,7 @@ export function StorefrontView({ initialStore }: StorefrontViewProps) {
         product={selectedProduct}
         theme={theme}
         isOpen={isProductDrawerOpen}
-        onClose={() => setIsProductDrawerOpen(false)}
+        onClose={handleCloseProductDrawer}
         onAddToCart={handleAddToCartFromDrawer}
       />
 
