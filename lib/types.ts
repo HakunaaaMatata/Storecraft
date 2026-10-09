@@ -190,6 +190,6 @@ export interface Order {
   tax: number
   shipping: number
   total: number
-  status: 'PAID' | 'PROCESSING' | 'SHIPPED' | string
+  status: 'PAID' | 'PROCESSING' | 'SHIPPED' | 'Delivered' | 'Cancelled' | 'Placed' | 'Packed' | string
   statusHistory?: { status: string; timestamp: string; note?: string }[]
 }

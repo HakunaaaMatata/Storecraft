@@ -197,7 +197,7 @@ export function createOrder({
     validatedItems.push({
       productId: item.productId,
       sku: product.sku || item.sku,
-      title: product.name || product.title || item.title,
+      title: product.title || item.title,
       image: item.image,
       quantity: item.quantity,
       unitPrice: product.price,

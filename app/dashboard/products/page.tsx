@@ -266,6 +266,7 @@ export default function ProductsPage() {
     }
   }
 
+
   const inputStyle = (hasError: boolean) => ({
     width: '100%', padding: '8px 12px', border: `1px solid ${hasError ? '#EF4444' : 'var(--line)'}`,
     borderRadius: '4px', fontSize: '12px', backgroundColor: '#FFFFFF', color: 'var(--navy)', outline: 'none'
