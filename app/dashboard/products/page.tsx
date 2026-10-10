@@ -554,7 +554,21 @@ export default function ProductsPage() {
                           if (file) {
                             const reader = new FileReader();
                             reader.onloadend = () => {
-                              setFormData({ ...formData, imageUrl: reader.result as string });
+                              const img = new window.Image();
+                              img.onload = () => {
+                                const canvas = document.createElement('canvas');
+                                const MAX = 600;
+                                let w = img.width;
+                                let h = img.height;
+                                if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } }
+                                else { if (h > MAX) { w *= MAX / h; h = MAX; } }
+                                canvas.width = Math.round(w);
+                                canvas.height = Math.round(h);
+                                const ctx = canvas.getContext('2d');
+                                ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                setFormData({ ...formData, imageUrl: canvas.toDataURL('image/jpeg', 0.6) });
+                              };
+                              img.src = reader.result as string;
                             };
                             reader.readAsDataURL(file);
                           }
