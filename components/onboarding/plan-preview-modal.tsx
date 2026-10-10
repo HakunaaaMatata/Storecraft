@@ -15,7 +15,8 @@ interface PlanPreviewModalProps {
 export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModalProps) {
   const [editedPlan, setEditedPlan] = useState<GeneratedStorePlan>(plan)
 
-  const themeConfig = THEME_PRESETS[editedPlan.recommendedTheme]
+  const presetKey = (editedPlan.recommendedTheme || editedPlan.themeSettings?.preset || 'atelier') as ThemePresetId
+  const themeConfig = THEME_PRESETS[presetKey] || THEME_PRESETS.atelier
 
   const handleConfirm = () => {
     onConfirm(editedPlan)
@@ -55,7 +56,7 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
         </button>
       </div>
 
-      {editedPlan.meta.provider !== 'gemini' && (
+      {editedPlan.meta?.provider !== 'gemini' && (
         <div style={{ backgroundColor: '#FFFBEB', color: '#B45309', padding: '12px 36px', fontSize: '13px', fontWeight: 500, borderBottom: '1px solid #FEF3C7', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Layout size={16} /> 
           AI API key is unconfigured. Generated using StoreCraft deterministic standard template.
@@ -139,9 +140,9 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               {editedPlan.sampleProductBlueprints.map((prod, idx) => (
                 <div key={idx} style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 800, color: editedPlan.meta.provider === 'gemini' ? '#10B981' : '#64748B', backgroundColor: editedPlan.meta.provider === 'gemini' ? '#ECFDF5' : '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
-                      {editedPlan.meta.provider === 'gemini' ? 'AI Generated' : 'Template Sample'}
+                  <div style={{ display: 'flex', justify: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: editedPlan.meta?.provider === 'gemini' ? '#10B981' : '#64748B', backgroundColor: editedPlan.meta?.provider === 'gemini' ? '#ECFDF5' : '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
+                      {editedPlan.meta?.provider === 'gemini' ? 'AI Generated' : 'Template Sample'}
                     </span>
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>${prod.suggestedPrice}</span>
                   </div>
@@ -162,7 +163,7 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>Recommended Theme</label>
             <select 
-              value={editedPlan.recommendedTheme} 
+              value={editedPlan.recommendedTheme || 'atelier'} 
               onChange={e => setEditedPlan({...editedPlan, recommendedTheme: e.target.value as ThemePresetId})}
               style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '13px', outline: 'none' }}
             >
@@ -178,14 +179,14 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <input 
                 type="color" 
-                value={editedPlan.themeSettings.accentColor} 
+                value={editedPlan.themeSettings?.accentColor || '#10B981'} 
                 onChange={e => setEditedPlan({
                   ...editedPlan, 
                   themeSettings: { ...editedPlan.themeSettings, accentColor: e.target.value }
                 })}
                 style={{ width: '36px', height: '36px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
               />
-              <span style={{ fontSize: '12px', color: '#475569', fontFamily: 'monospace' }}>{editedPlan.themeSettings.accentColor}</span>
+              <span style={{ fontSize: '12px', color: '#475569', fontFamily: 'monospace' }}>{editedPlan.themeSettings?.accentColor || '#10B981'}</span>
             </div>
           </div>
           
@@ -193,7 +194,7 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>Hero Headline</label>
             <input 
               type="text" 
-              value={editedPlan.themeSettings.heroHeadline} 
+              value={editedPlan.themeSettings?.heroHeadline || ''} 
               onChange={e => setEditedPlan({
                 ...editedPlan, 
                 themeSettings: { ...editedPlan.themeSettings, heroHeadline: e.target.value }
@@ -206,7 +207,7 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
             <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>Hero Subtitle</label>
             <textarea 
               rows={3}
-              value={editedPlan.themeSettings.heroSubtitle} 
+              value={editedPlan.themeSettings?.heroSubtitle || ''} 
               onChange={e => setEditedPlan({
                 ...editedPlan, 
                 themeSettings: { ...editedPlan.themeSettings, heroSubtitle: e.target.value }

@@ -1,6 +1,192 @@
 {
   "stores": [
     {
+      "id": "store-jewellery-store-3-mv1szywj",
+      "slug": "jewellery-store-3",
+      "name": "Jewellery Store",
+      "tagline": "Jewellery Store — Curated Jewellery",
+      "announcement": "AUTUMN / WINTER 2026",
+      "preset": "atelier",
+      "categories": [
+        "All",
+        "Jewellery"
+      ],
+      "heroHeadline": "Tailored with intent.",
+      "heroHeadlineEm": "Crafted forever.",
+      "heroSubtitle": "Refined silhouettes and timeless natural fibers, assembled in limited numbered editions.",
+      "heroImage": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "jewellery-store-3-p1",
+          "sku": "SKU-JEW-101",
+          "title": "Minimalist Daily Tote",
+          "subtitle": "Heavyweight organic canvas",
+          "category": "Jewellery",
+          "price": 45,
+          "compareAtPrice": 54,
+          "inventory": 30,
+          "lowStockThreshold": 5,
+          "description": "Durable everyday carry bag with reinforced stitching and interior pockets.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        }
+      ],
+      "themeSettings": {
+        "preset": "atelier",
+        "primaryColor": "#101828",
+        "accentColor": "#10B981",
+        "fontHeading": "DM Serif Display",
+        "fontBody": "Manrope"
+      },
+      "ownerId": "user-1791599934943-axted",
+      "ownerName": "Anusha",
+      "ownerEmail": "anushatumarnavis@gmail.com",
+      "phone": "08431108170",
+      "address": "t, Bengaluru - 560096",
+      "businessType": "Jewellery",
+      "description": "",
+      "createdAt": "2026-10-10T02:57:16.147Z"
+    },
+    {
+      "id": "store-jewellery-store-2-mv1spf0h",
+      "slug": "jewellery-store-2",
+      "name": "Jewellery Store",
+      "tagline": "Jewellery Store — Curated Jewellery",
+      "announcement": "AUTUMN / WINTER 2026",
+      "preset": "atelier",
+      "categories": [
+        "All",
+        "Jewellery"
+      ],
+      "heroHeadline": "Tailored with intent.",
+      "heroHeadlineEm": "Crafted forever.",
+      "heroSubtitle": "Refined silhouettes and timeless natural fibers, assembled in limited numbered editions.",
+      "heroImage": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "jewellery-store-2-p1",
+          "sku": "SKU-JEW-101",
+          "title": "Minimalist Daily Tote",
+          "subtitle": "Heavyweight organic canvas",
+          "category": "Jewellery",
+          "price": 45,
+          "compareAtPrice": 54,
+          "inventory": 30,
+          "lowStockThreshold": 5,
+          "description": "Durable everyday carry bag with reinforced stitching and interior pockets.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        }
+      ],
+      "themeSettings": {
+        "preset": "atelier",
+        "primaryColor": "#101828",
+        "accentColor": "#10B981",
+        "fontHeading": "DM Serif Display",
+        "fontBody": "Manrope"
+      },
+      "ownerId": "user-1791599934943-axted",
+      "ownerName": "Anusha",
+      "ownerEmail": "anushatumarnavis@gmail.com",
+      "phone": "08431108170",
+      "address": "Bengaluru - 560096",
+      "businessType": "Jewellery",
+      "description": "",
+      "createdAt": "2026-10-10T02:49:03.810Z"
+    },
+    {
+      "id": "store-jewellery-store-mv1sjnsu",
+      "slug": "jewellery-store",
+      "name": "Jewellery Store",
+      "tagline": "Jewellery Store — Curated Jewellery",
+      "announcement": "AUTUMN / WINTER 2026",
+      "preset": "atelier",
+      "categories": [
+        "All",
+        "Jewellery",
+        "Jewelry and Accessories"
+      ],
+      "heroHeadline": "Giva",
+      "heroHeadlineEm": "Crafted forever.",
+      "heroSubtitle": "jwellery for all",
+      "heroImage": "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "jewellery-store-p1",
+          "sku": "SKU-JEW-101",
+          "title": "Minimalist Daily Tote",
+          "subtitle": "Heavyweight organic canvas",
+          "category": "Jewellery",
+          "price": 45,
+          "compareAtPrice": 54,
+          "inventory": 30,
+          "lowStockThreshold": 5,
+          "description": "Durable everyday carry bag with reinforced stitching and interior pockets.",
+          "features": [
+            "Original studio design specification",
+            "Sustainably verified materials",
+            "Quality checked prior to fulfillment"
+          ],
+          "images": [
+            "https://images.unsplash.com/photo-1590874103328-eac38a683ce7?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {
+            "colors": [
+              {
+                "name": "Default",
+                "hex": "#101828"
+              }
+            ]
+          }
+        }
+      ],
+      "themeSettings": {
+        "preset": "atelier",
+        "primaryColor": "#101828",
+        "accentColor": "#10B981",
+        "fontHeading": "DM Serif Display",
+        "fontBody": "Manrope",
+        "heroHeadline": "Giva",
+        "heroSubtitle": "jwellery for all"
+      },
+      "ownerId": "user-1791599934943-axted",
+      "ownerName": "Anusha",
+      "ownerEmail": "anushatumarnavis@gmail.com",
+      "phone": "08431108170",
+      "address": "Bengaluru - 560096",
+      "businessType": "Jewellery",
+      "description": "",
+      "createdAt": "2026-10-10T02:44:35.263Z"
+    },
+    {
       "id": "store-forma",
       "slug": "forma",
       "name": "Forma Living",
@@ -932,36 +1118,12 @@
       "createdAt": "2026-01-01T00:00:00.000Z"
     },
     {
-      "id": "user-1791595193466-ezdc4",
-      "name": "Akshay",
-      "email": "akshayabhi0005@gmail.com",
-      "passwordHash": "a016ebc673b15f89c0a019e6b50245a3d904fb824154ee317eb70795e2429eb49fd5002c1be7d1a3b25aa81a0b41adafe21b9109160729c02df809717aeae0fa",
-      "salt": "6069d4dcc995d699b42d1ad8cbab3169",
-      "createdAt": "2026-10-10T01:19:53.466Z"
-    },
-    {
-      "id": "user-1791595229414-hbq6b",
-      "name": "arun",
-      "email": "arun@gmail.com",
-      "passwordHash": "c801233e7ddbc6f604ed9076d767b08263ab5a01a5e7a1498ad9fc6eb5d384abda5225c7f15c0e1dd7e0ddb0a37a733e60b810821650519f36c7500f0c7fb5c8",
-      "salt": "d89e15ad193928c6a94ecbb494a410a4",
-      "createdAt": "2026-10-10T01:20:29.414Z"
-    },
-    {
-      "id": "user-1791595731792-w5q73",
-      "name": "ravi",
-      "email": "ravi@gmail.com",
-      "passwordHash": "a52628a51bf1bc59fad626a74715012fc28814c7c65dfdb5339029e5e0f01ee4db0d593fc78085cdf60ac6578752373d32f7c28f0cb75a6386370dfb1daa9e33",
-      "salt": "a89297413f0b42aa5ef97570c4e3362d",
-      "createdAt": "2026-10-10T01:28:51.792Z"
-    },
-    {
-      "id": "user-1791596016112-f212h",
-      "name": "krishna",
-      "email": "akshay0005@gmail.com",
-      "passwordHash": "605efaebe5f3d27d7633fb7e0baad25acb60cf29d6b9178326ce794fd116e32cb6a417299f8c40d61cd0c9e388778bb5d404310ba6bc78a6a1e5ed905aedc37b",
-      "salt": "c08c752e1b240c1b231acb060ca6a43d",
-      "createdAt": "2026-10-10T01:33:36.112Z"
+      "id": "user-1791599934943-axted",
+      "name": "Anusha",
+      "email": "anushatumarnavis@gmail.com",
+      "passwordHash": "788383b9cba0979ff503012b585df062e78d0863aaa6cf69df1f7ec810551ef5cf9816e0de0ffd0f7758c50c538bedb961b3c51131e7432b5bd42607268c0be6",
+      "salt": "71dd4b8bee8cf10a7868a095ad8fbae5",
+      "createdAt": "2026-10-10T02:38:54.943Z"
     }
   ],
   "sessions": [
@@ -976,6 +1138,12 @@
       "userId": "user-demo-jamie-davis",
       "expiresAt": "2026-10-16T18:09:53.153Z",
       "createdAt": "2026-10-09T18:09:53.153Z"
+    },
+    {
+      "token": "eyJ1c2VySWQiOiJ1c2VyLTE3OTE1OTk5MzQ5NDMtYXh0ZWQiLCJ1c2VyIjp7ImlkIjoidXNlci0xNzkxNTk5OTM0OTQzLWF4dGVkIiwibmFtZSI6IkFudXNoYSIsImVtYWlsIjoiYW51c2hhdHVtYXJuYXZpc0BnbWFpbC5jb20iLCJjcmVhdGVkQXQiOiIyMDI2LTEwLTEwVDAyOjM4OjU0Ljk0M1oifSwiZXhwaXJlc0F0IjoiMjAyNi0xMC0xN1QwMjozODo1NC45NTFaIn0=.7Aptfl5aMPxbxTAOo7LmCmGBldinia65LYaP/bw1wzc=",
+      "userId": "user-1791599934943-axted",
+      "expiresAt": "2026-10-17T02:38:54.951Z",
+      "createdAt": "2026-10-10T02:38:54.964Z"
     }
   ]
 }

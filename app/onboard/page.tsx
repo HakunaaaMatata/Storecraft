@@ -33,6 +33,8 @@ import { getSampleProductsSummary } from '@/lib/sample-catalog'
 import { AIGeneratorWizard } from '@/components/onboarding/ai-generator-wizard'
 import { PlanPreviewModal } from '@/components/onboarding/plan-preview-modal'
 import { GeneratedStorePlan } from '@/lib/ai-generator'
+import { SampleProductImportModal } from '@/components/onboarding/sample-product-modal'
+import { DummySampleProduct } from '@/lib/dummy-sample-products'
 
 const PREDEFINED_CATEGORIES = [
   'Fashion',
@@ -107,6 +109,40 @@ export default function OnboardPage() {
   const [csvError, setCsvError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
+
+  // Step 1 Sample Product Import Modal State
+  const [showStep1SampleModal, setShowStep1SampleModal] = useState(false)
+  const [sampleProductsSuccessToast, setSampleProductsSuccessToast] = useState<string | null>(null)
+
+  const handleConfirmSampleProductsOnStep1 = (products: DummySampleProduct[], category: string) => {
+    const parsedRows = products.map(p => ({
+      title: p.name,
+      price: p.price,
+      description: p.description,
+      category: p.category,
+      inventory: p.stock,
+      sku: p.sku,
+      images: [p.image],
+    }))
+
+    setCsvFile({
+      name: `${category} Sample Products`,
+      size: 1024,
+      count: parsedRows.length,
+      rows: parsedRows,
+    })
+
+    setFormData(prev => ({
+      ...prev,
+      productsOption: 'csv',
+      categories: Array.from(new Set([...prev.categories, category].filter(Boolean))),
+    }))
+
+    setSampleProductsSuccessToast('5 sample products added successfully.')
+    setTimeout(() => {
+      setSampleProductsSuccessToast(null)
+    }, 4000)
+  }
 
   // Load saved draft and prefill with user info on mount
   useEffect(() => {
@@ -621,7 +657,7 @@ export default function OnboardPage() {
                 businessType: plan.businessCategory,
                 description: plan.description,
                 themePreset: plan.themeSettings.preset,
-                categories: [plan.businessCategory, ...(plan.categories || [])],
+                categories: Array.from(new Set([plan.businessCategory, ...(plan.categories || [])].filter(Boolean))),
                 productsOption: 'csv',
                 themeSettings: plan.themeSettings
               })
@@ -1017,6 +1053,25 @@ export default function OnboardPage() {
                   />
                 </div>
               </div>
+
+              {sampleProductsSuccessToast && (
+                <div style={{
+                  backgroundColor: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  color: '#065F46',
+                  padding: '12px 16px',
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  marginTop: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}>
+                  <CheckCircle2 size={16} color="#059669" />
+                  <span>{sampleProductsSuccessToast}</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1143,9 +1198,9 @@ export default function OnboardPage() {
                   Selected Categories ({formData.categories.length}):
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {formData.categories.map(c => (
+                  {Array.from(new Set(formData.categories)).map((c, idx) => (
                     <span
-                      key={c}
+                      key={`${c}-${idx}`}
                       style={{
                         padding: '4px 10px',
                         backgroundColor: '#101828',
@@ -1682,8 +1737,8 @@ export default function OnboardPage() {
                     <div>
                       <span style={{ color: '#64748B', display: 'block', marginBottom: '4px' }}>Categories:</span>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                        {formData.categories.map(c => (
-                          <span key={c} style={{ padding: '2px 8px', backgroundColor: '#E2E8F0', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>
+                        {Array.from(new Set(formData.categories)).map((c, idx) => (
+                          <span key={`${c}-${idx}`} style={{ padding: '2px 8px', backgroundColor: '#E2E8F0', borderRadius: '12px', fontSize: '10px', fontWeight: 600 }}>
                             {c}
                           </span>
                         ))}
@@ -1775,7 +1830,29 @@ export default function OnboardPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+              {step === 1 && (
+                <button
+                  type="button"
+                  onClick={() => setShowStep1SampleModal(true)}
+                  style={{
+                    padding: '9px 15px',
+                    borderRadius: '6px',
+                    border: '1px solid #10B981',
+                    backgroundColor: '#ECFDF5',
+                    color: '#047857',
+                    fontSize: '12px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  }}
+                >
+                  <Package size={15} /> Add Sample Products
+                </button>
+              )}
               {step < 5 ? (
                 <button
                   type="button"
@@ -1811,6 +1888,14 @@ export default function OnboardPage() {
         )}
 
       </main>
+
+      {/* Step 1 Sample Product Import Modal */}
+      <SampleProductImportModal
+        isOpen={showStep1SampleModal}
+        initialCategory={formData.businessType}
+        onClose={() => setShowStep1SampleModal(false)}
+        onConfirmImport={handleConfirmSampleProductsOnStep1}
+      />
     </div>
   )
 }

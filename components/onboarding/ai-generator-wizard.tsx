@@ -1,10 +1,12 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Store, MapPin, Truck, Palette, Sparkles, Loader2, ArrowLeft, ArrowRight, AlertCircle } from 'lucide-react'
+import { Store, MapPin, Truck, Palette, Sparkles, Loader2, ArrowLeft, ArrowRight, AlertCircle, Package, CheckCircle2 } from 'lucide-react'
 import { THEME_PRESETS } from '@/lib/theme-presets'
 import { ThemePresetId } from '@/lib/types'
 import { GenerateStoreInput, GeneratedStorePlan } from '@/lib/ai-generator'
+import { SampleProductImportModal } from '@/components/onboarding/sample-product-modal'
+import { DummySampleProduct } from '@/lib/dummy-sample-products'
 
 interface AIGeneratorWizardProps {
   onPlanGenerated: (plan: GeneratedStorePlan) => void
@@ -14,6 +16,8 @@ interface AIGeneratorWizardProps {
 export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWizardProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showSampleModal, setShowSampleModal] = useState(false)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
   
   const [formData, setFormData] = useState<GenerateStoreInput>({
     businessName: '',
@@ -34,6 +38,45 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
     }
   })
   const [fallbackOffered, setFallbackOffered] = useState(false)
+
+  const handleConfirmSampleProducts = (products: DummySampleProduct[], category: string) => {
+    // Generate a valid store plan containing the 5 sample products
+    const plan: GeneratedStorePlan = {
+      storeName: formData.businessName || `${category} Store`,
+      businessCategory: category,
+      recommendedTheme: (formData.preferredTheme || 'atelier') as ThemePresetId,
+      themeSettings: {
+        preset: formData.preferredTheme || 'atelier',
+        primaryColor: '#101828',
+        accentColor: '#10B981',
+        fontHeading: 'DM Serif Display',
+        fontBody: 'Manrope',
+      },
+      heroHeadline: `Discover ${category}`,
+      heroSubtitle: `Explore our collection of 5 hand-picked ${category.toLowerCase()} items.`,
+      announcement: `Free shipping on all ${category.toLowerCase()} orders!`,
+      categories: [category],
+      sampleProductBlueprints: products.map(p => ({
+        name: p.name,
+        description: p.description,
+        category: p.category,
+        price: p.price,
+        stock: p.stock,
+        sku: p.sku,
+        images: [p.image],
+      })),
+      meta: {
+        provider: 'standard',
+        model: 'sample-importer',
+        generatedAt: new Date().toISOString(),
+      },
+    }
+
+    setToastMessage('5 sample products added successfully.')
+    setTimeout(() => {
+      onPlanGenerated(plan)
+    }, 400)
+  }
 
   const handleSubmit = async (e?: React.FormEvent, forceFallback = false) => {
     if (e) e.preventDefault()
@@ -67,6 +110,7 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
       setLoading(false)
     }
   }
+
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
@@ -93,6 +137,25 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
           Tell us a little about your business, and our AI will build a complete, ready-to-publish storefront for you.
         </p>
       </div>
+
+      {toastMessage && (
+        <div style={{
+          backgroundColor: '#ECFDF5',
+          border: '1px solid #A7F3D0',
+          color: '#065F46',
+          padding: '12px 16px',
+          borderRadius: '6px',
+          fontSize: '13px',
+          fontWeight: 600,
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <CheckCircle2 size={16} color="#059669" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
 
       {error && (
         <div style={{
@@ -237,7 +300,7 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E2E8F0' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E2E8F0', flexWrap: 'wrap' }}>
           <button 
             type="button" 
             onClick={onCancel}
@@ -247,6 +310,16 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
             }}
           >
             Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowSampleModal(true)}
+            disabled={loading}
+            style={{
+              padding: '10px 16px', borderRadius: '6px', border: '1px solid #10B981', backgroundColor: '#ECFDF5', color: '#047857', fontSize: '13px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+            }}
+          >
+            <Package size={16} /> Add Sample Products
           </button>
           <button 
             type="submit" 
@@ -259,6 +332,15 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
           </button>
         </div>
       </form>
+
+      {/* Category Selection & Product Preview Modal */}
+      <SampleProductImportModal
+        isOpen={showSampleModal}
+        initialCategory={formData.businessCategory}
+        onClose={() => setShowSampleModal(false)}
+        onConfirmImport={handleConfirmSampleProducts}
+      />
     </div>
   )
 }
+
