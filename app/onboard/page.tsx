@@ -160,7 +160,39 @@ export default function OnboardPage() {
   if (!isClient || authLoading || !isAuthenticated) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8FAFC' }}>
-        <p style={{ color: '#64748B', fontSize: '13px', fontWeight: 600 }}>Loading StoreCraft setup wizard...</p>
+        <div style={{ width: '100%', maxWidth: '900px', backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 20px 40px rgba(0,0,0,0.08)', overflow: 'hidden', display: 'flex', minHeight: '600px' }}>
+          {/* Sidebar Skeleton */}
+          <div style={{ width: '280px', backgroundColor: '#F1F5F9', padding: '40px 32px', borderRight: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '140px', height: '24px', backgroundColor: '#CBD5E1', borderRadius: '4px', marginBottom: '48px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ display: 'flex', gap: '16px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#CBD5E1', flexShrink: 0, animation: 'pulse 1.5s infinite ease-in-out' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ width: '80%', height: '16px', backgroundColor: '#CBD5E1', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                    <div style={{ width: '60%', height: '12px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Main Area Skeleton */}
+          <div style={{ flex: 1, padding: '48px 64px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ width: '60%', height: '32px', backgroundColor: '#E2E8F0', borderRadius: '4px', marginBottom: '16px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '40%', height: '16px', backgroundColor: '#E2E8F0', borderRadius: '4px', marginBottom: '48px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', flex: 1 }}>
+              <div style={{ width: '100%', height: '64px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              <div style={{ width: '100%', height: '64px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              <div style={{ width: '100%', height: '64px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            </div>
+          </div>
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
       </div>
     )
   }

@@ -660,7 +660,31 @@ function OrdersContent() {
 
 export default function OrdersPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '24px', color: 'var(--slate)' }}>Loading Orders...</div>}>
+    <Suspense fallback={
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div style={{ width: '150px', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          <div style={{ width: '100px', height: '32px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+        </div>
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid var(--line)', overflow: 'hidden' }}>
+          {[1, 2, 3, 4, 5].map(i => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ width: '20%', height: '14px', backgroundColor: '#E2E8F0', borderRadius: '2px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                <div style={{ width: '15%', height: '10px', backgroundColor: '#E2E8F0', borderRadius: '2px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              </div>
+              <div style={{ width: '80px', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '12px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            </div>
+          ))}
+        </div>
+      </div>
+    }>
       <OrdersContent />
     </Suspense>
   )

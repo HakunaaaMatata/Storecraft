@@ -349,7 +349,24 @@ export default function ProductsPage() {
       {/* Table */}
       <div style={{ backgroundColor: '#FFFFFF', borderRadius: '6px', border: '1px solid var(--line)', overflow: 'hidden' }}>
         {isLoading ? (
-          <div style={{ padding: '48px 20px', textAlign: 'center', color: 'var(--slate)' }}>Loading products...</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <style>{`
+              @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+              }
+            `}</style>
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--line)' }}>
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#F1F5F9', borderRadius: '4px', marginRight: '16px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ width: '30%', height: '14px', backgroundColor: '#E2E8F0', borderRadius: '2px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                  <div style={{ width: '20%', height: '10px', backgroundColor: '#E2E8F0', borderRadius: '2px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                </div>
+                <div style={{ width: '60px', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '12px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <div style={{ padding: '48px 20px', textAlign: 'center', color: '#DC2626' }}>{error}</div>
         ) : paginatedProducts.length === 0 ? (

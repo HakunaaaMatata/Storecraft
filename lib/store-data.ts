@@ -416,6 +416,15 @@ class StorecraftDatabase {
     return this.getProducts(storeId)
   }
 
+  setStoreOrders(storeId: string, storeOrders: Order[]) {
+    const all = this.getOrders().filter(o => o.storeId !== storeId)
+    const newAll = [...storeOrders, ...all]
+    if (this.isBrowser()) {
+      localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(newAll))
+      this.dispatchUpdate()
+    }
+  }
+
   updateOrderStatus(orderId: string, status: OrderStatus, note?: string): Order | undefined {
     const all = this.getOrders()
     const order = all.find((o) => o.id === orderId)

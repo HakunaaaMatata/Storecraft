@@ -40,7 +40,28 @@ export default function ThemeCustomizerPage() {
     }
   }, [activeStore?.slug, isClient])
 
-  if (!isClient || authLoading || !draft || !storeData) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-gray-400" /></div>
+  if (!isClient || authLoading || !draft || !storeData) return (
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden bg-slate-50">
+      <div className="w-80 bg-white border-r border-slate-200 flex flex-col h-full shrink-0">
+        <div className="p-4 border-b border-slate-100 flex gap-2">
+          {[1,2,3,4].map(i => <div key={i} className="h-8 flex-1 bg-slate-100 rounded animate-pulse" />)}
+        </div>
+        <div className="p-6 space-y-6">
+          <div className="h-4 w-32 bg-slate-100 rounded animate-pulse" />
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-16 w-full bg-slate-50 rounded border border-slate-100 animate-pulse" />)}
+          </div>
+        </div>
+      </div>
+      <div className="flex-1 bg-slate-100/50 p-6 flex flex-col">
+        <div className="h-14 w-full bg-white rounded-lg border border-slate-200 mb-6 flex items-center px-4 justify-between animate-pulse">
+          <div className="h-4 w-48 bg-slate-100 rounded" />
+          <div className="flex gap-2"><div className="h-8 w-20 bg-slate-100 rounded" /><div className="h-8 w-24 bg-slate-200 rounded" /></div>
+        </div>
+        <div className="flex-1 bg-white rounded-lg border border-slate-200 animate-pulse" />
+      </div>
+    </div>
+  )
 
 
   const resolvedTheme: ThemeConfig = {

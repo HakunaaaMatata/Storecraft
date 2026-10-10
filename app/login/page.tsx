@@ -460,7 +460,36 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>}>
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#F8FAFC' }}>
+        <header style={{ padding: '24px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderBottom: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '24px', height: '24px', backgroundColor: '#CBD5E1', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '80px', height: '20px', backgroundColor: '#CBD5E1', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+          <div style={{ width: '60px', height: '16px', backgroundColor: '#CBD5E1', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+        </header>
+        <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
+          <div style={{ width: '100%', maxWidth: '440px', backgroundColor: '#FFFFFF', borderRadius: '16px', boxShadow: '0 12px 30px rgba(0,0,0,0.04)', padding: '40px' }}>
+            <div style={{ width: '100px', height: '16px', backgroundColor: '#CBD5E1', borderRadius: '4px', marginBottom: '16px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '70%', height: '28px', backgroundColor: '#CBD5E1', borderRadius: '4px', marginBottom: '12px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '90%', height: '16px', backgroundColor: '#E2E8F0', borderRadius: '4px', marginBottom: '32px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ width: '100%', height: '48px', backgroundColor: '#F1F5F9', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              <div style={{ width: '100%', height: '48px', backgroundColor: '#F1F5F9', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+              <div style={{ width: '100%', height: '48px', backgroundColor: '#CBD5E1', borderRadius: '8px', marginTop: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            </div>
+          </div>
+        </main>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
+      </div>
+    }>
       <LoginForm />
     </Suspense>
   )
