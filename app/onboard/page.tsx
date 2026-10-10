@@ -30,9 +30,6 @@ import { THEME_PRESETS, ThemeConfig } from '@/lib/theme-presets'
 import { ThemePresetId, Product } from '@/lib/types'
 import { db } from '@/lib/store-data'
 import { getSampleProductsSummary } from '@/lib/sample-catalog'
-import { AIGeneratorWizard } from '@/components/onboarding/ai-generator-wizard'
-import { PlanPreviewModal } from '@/components/onboarding/plan-preview-modal'
-import { GeneratedStorePlan } from '@/lib/ai-generator'
 import { SampleProductImportModal } from '@/components/onboarding/sample-product-modal'
 import { DummySampleProduct } from '@/lib/dummy-sample-products'
 
@@ -76,8 +73,7 @@ export default function OnboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth()
   
   const [step, setStep] = useState(1)
-  const [setupMethod, setSetupMethod] = useState<'ai' | 'manual' | null>(null)
-  const [generatedPlan, setGeneratedPlan] = useState<GeneratedStorePlan | null>(null)
+
   const [isClient, setIsClient] = useState(false)
   const [isLaunching, setIsLaunching] = useState(false)
   const [launchError, setLaunchError] = useState<string | null>(null)
@@ -154,8 +150,6 @@ export default function OnboardPage() {
         if (parsed.step) setStep(parsed.step)
         if (parsed.formData) setFormData(parsed.formData)
         if (parsed.csvFile) setCsvFile(parsed.csvFile)
-        if (parsed.setupMethod) setSetupMethod(parsed.setupMethod)
-        if (parsed.generatedPlan) setGeneratedPlan(parsed.generatedPlan)
       } catch (e) {
         console.warn('Failed to parse onboarding draft:', e)
       }
@@ -186,12 +180,10 @@ export default function OnboardPage() {
       localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify({
         step,
         formData,
-        csvFile: csvFile ? { name: csvFile.name, size: csvFile.size, count: csvFile.count } : null,
-        setupMethod,
-        generatedPlan
+        csvFile: csvFile ? { name: csvFile.name, size: csvFile.size, count: csvFile.count } : null
       }))
     }
-  }, [step, formData, csvFile, setupMethod, generatedPlan, isClient])
+  }, [step, formData, csvFile, isClient])
 
   if (!isClient || authLoading || !isAuthenticated) {
     return (
@@ -581,108 +573,8 @@ export default function OnboardPage() {
 
       {/* Main Wizard Container */}
       <main style={{ flex: 1, padding: '36px 4vw 60px', maxWidth: '1080px', margin: '0 auto', width: '100%' }}>
-        
-        {setupMethod === null && (
-          <div style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '10px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 4px 20px -2px rgba(16, 24, 40, 0.05)',
-            padding: '48px',
-            textAlign: 'center',
-            maxWidth: '600px',
-            margin: '40px auto'
-          }}>
-            <h1 style={{ fontSize: '28px', margin: '0 0 16px', letterSpacing: '-0.03em' }}>How would you like to build your store?</h1>
-            <p style={{ fontSize: '14px', color: '#64748B', margin: '0 0 40px' }}>Choose between our automated AI generation or manual setup.</p>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <button 
-                onClick={() => setSetupMethod('ai')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '24px', borderRadius: '12px', border: '2px solid #10B981',
-                  backgroundColor: '#F0FDF4', cursor: 'pointer', textAlign: 'left',
-                  transition: 'transform 0.15s ease'
-                }}
-              >
-                <div>
-                  <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#065F46', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={20} /> Generate my store with StoreCraft AI
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#047857' }}>
-                    Provide a few details and our AI will build a complete, ready-to-publish storefront for you.
-                  </p>
-                </div>
-                <ArrowRight size={20} color="#059669" />
-              </button>
 
-              <button 
-                onClick={() => setSetupMethod('manual')}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '24px', borderRadius: '12px', border: '1px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF', cursor: 'pointer', textAlign: 'left'
-                }}
-              >
-                <div>
-                  <h3 style={{ margin: '0 0 8px', fontSize: '18px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Store size={20} /> Set up my store manually
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
-                    Go through the step-by-step wizard to configure your categories, products, and theme.
-                  </p>
-                </div>
-                <ArrowRight size={20} color="#64748B" />
-              </button>
-            </div>
-          </div>
-        )}
 
-        {setupMethod === 'ai' && !generatedPlan && (
-          <AIGeneratorWizard 
-            onPlanGenerated={setGeneratedPlan}
-            onCancel={() => setSetupMethod(null)}
-          />
-        )}
-
-        {setupMethod === 'ai' && generatedPlan && (
-          <PlanPreviewModal 
-            plan={generatedPlan}
-            onConfirm={(plan) => {
-              // Map AI plan back to manual form data and skip to review (step 5)
-              setFormData({
-                ...formData,
-                name: plan.storeName,
-                businessType: plan.businessCategory,
-                description: plan.description,
-                themePreset: plan.themeSettings.preset,
-                categories: Array.from(new Set([plan.businessCategory, ...(plan.categories || [])].filter(Boolean))),
-                productsOption: 'csv',
-                themeSettings: plan.themeSettings
-              })
-              setCsvFile({
-                name: 'AI Generated Catalog',
-                size: 1024,
-                count: plan.sampleProductBlueprints.length,
-                rows: plan.sampleProductBlueprints.map(p => ({
-                  title: p.title,
-                  price: p.suggestedPrice,
-                  description: p.description,
-                  category: p.category,
-                  inventory: 15,
-                  isAiSample: true
-                } as any))
-              })
-              setStep(5)
-              setSetupMethod('manual')
-            }}
-            onCancel={() => setGeneratedPlan(null)}
-          />
-        )}
-
-        {setupMethod === 'manual' && (
-          <>
             {/* Step Indicator */}
             <div style={{
               backgroundColor: '#FFFFFF',
@@ -1809,7 +1701,7 @@ export default function OnboardPage() {
             borderTop: '1px solid #E2E8F0',
           }}>
             <div>
-              {step > 1 ? (
+              {step > 1 && (
                 <button
                   type="button"
                   onClick={handlePrev}
@@ -1817,15 +1709,6 @@ export default function OnboardPage() {
                   style={{ border: '1px solid #CBD5E1', fontSize: '12px' }}
                 >
                   <ArrowLeft size={14} /> Back
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setSetupMethod(null)}
-                  className="button button-light"
-                  style={{ border: '1px solid #CBD5E1', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <ArrowLeft size={14} /> Change Setup Method
                 </button>
               )}
             </div>
@@ -1882,11 +1765,7 @@ export default function OnboardPage() {
               )}
             </div>
           </div>
-
-          </div>
-          </>
-        )}
-
+        </div>
       </main>
 
       {/* Step 1 Sample Product Import Modal */}
