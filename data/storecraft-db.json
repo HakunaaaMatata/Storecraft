@@ -926,10 +926,42 @@
     {
       "id": "user-demo-jamie-davis",
       "name": "Jamie Davis",
-      "email": "demo@storecraft.com",
-      "passwordHash": "4c99de07bfb04d6b05259fe8d3ca9f463f67d3210580b2a9a2afd4533bd3f0c10ae5d03d59a827a8736c25b2b96268c27a4295c1b766b119f61016afd603e1c9",
+      "email": "owner@storecraft.demo",
+      "passwordHash": "dd79736083a9f0684080691cf3233a337c3ff22ee903b28f340d7769a0d224ed373cb0575f6df5932abc61bd46acc951e88c28c0c090aaceb1c428091ac3af94",
       "salt": "demo-salt-storecraft-2026",
       "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "user-1791595193466-ezdc4",
+      "name": "Akshay",
+      "email": "akshayabhi0005@gmail.com",
+      "passwordHash": "a016ebc673b15f89c0a019e6b50245a3d904fb824154ee317eb70795e2429eb49fd5002c1be7d1a3b25aa81a0b41adafe21b9109160729c02df809717aeae0fa",
+      "salt": "6069d4dcc995d699b42d1ad8cbab3169",
+      "createdAt": "2026-10-10T01:19:53.466Z"
+    },
+    {
+      "id": "user-1791595229414-hbq6b",
+      "name": "arun",
+      "email": "arun@gmail.com",
+      "passwordHash": "c801233e7ddbc6f604ed9076d767b08263ab5a01a5e7a1498ad9fc6eb5d384abda5225c7f15c0e1dd7e0ddb0a37a733e60b810821650519f36c7500f0c7fb5c8",
+      "salt": "d89e15ad193928c6a94ecbb494a410a4",
+      "createdAt": "2026-10-10T01:20:29.414Z"
+    },
+    {
+      "id": "user-1791595731792-w5q73",
+      "name": "ravi",
+      "email": "ravi@gmail.com",
+      "passwordHash": "a52628a51bf1bc59fad626a74715012fc28814c7c65dfdb5339029e5e0f01ee4db0d593fc78085cdf60ac6578752373d32f7c28f0cb75a6386370dfb1daa9e33",
+      "salt": "a89297413f0b42aa5ef97570c4e3362d",
+      "createdAt": "2026-10-10T01:28:51.792Z"
+    },
+    {
+      "id": "user-1791596016112-f212h",
+      "name": "krishna",
+      "email": "akshay0005@gmail.com",
+      "passwordHash": "605efaebe5f3d27d7633fb7e0baad25acb60cf29d6b9178326ce794fd116e32cb6a417299f8c40d61cd0c9e388778bb5d404310ba6bc78a6a1e5ed905aedc37b",
+      "salt": "c08c752e1b240c1b231acb060ca6a43d",
+      "createdAt": "2026-10-10T01:33:36.112Z"
     }
   ],
   "sessions": [
