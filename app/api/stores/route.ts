@@ -32,6 +32,7 @@ export async function POST(request: Request) {
       productsOption,
       importedProducts,
       themePreset,
+      themeSettings,
     } = body
 
     const errors: Record<string, string> = {}
@@ -169,14 +170,15 @@ export async function POST(request: Request) {
       slug: finalSlug,
       name: name.trim(),
       tagline: description?.trim() || `${name.trim()} — Curated ${businessType}`,
-      announcement: themeConfig.heroBadge || 'Complimentary worldwide shipping on inaugural orders',
+      announcement: themeSettings?.announcement || themeConfig.heroBadge || 'Complimentary worldwide shipping on inaugural orders',
       preset: selectedPreset,
       categories: ['All', ...cleanedCategories],
-      heroHeadline: themeConfig.heroHeadline,
-      heroHeadlineEm: themeConfig.heroHeadlineEm,
-      heroSubtitle: description?.trim() || themeConfig.heroSubtitle,
-      heroImage: themeConfig.heroImage,
+      heroHeadline: themeSettings?.heroHeadline || themeConfig.heroHeadline,
+      heroHeadlineEm: themeSettings?.heroHeadlineEm || themeConfig.heroHeadlineEm,
+      heroSubtitle: themeSettings?.heroSubtitle || description?.trim() || themeConfig.heroSubtitle,
+      heroImage: themeSettings?.heroImage || themeConfig.heroImage,
       products: generatedProducts,
+      themeSettings: themeSettings,
       // Metadata
       ownerId: user.id,
       ownerName: ownerName.trim(),

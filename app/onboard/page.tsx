@@ -81,7 +81,6 @@ export default function OnboardPage() {
   const [launchError, setLaunchError] = useState<string | null>(null)
   const [launchSuccess, setLaunchSuccess] = useState(false)
 
-  // Form State
   const [formData, setFormData] = useState({
     name: '',
     ownerName: '',
@@ -95,6 +94,7 @@ export default function OnboardPage() {
     categories: ['Home and Living'],
     productsOption: 'sample' as 'sample' | 'csv' | 'none',
     themePreset: 'forma' as ThemePresetId,
+    themeSettings: null as any
   })
 
   // Field Errors
@@ -406,6 +406,7 @@ export default function OnboardPage() {
           productsOption: formData.productsOption,
           importedProducts: csvFile?.rows,
           themePreset: formData.themePreset,
+          themeSettings: formData.themeSettings,
         }),
       })
 
@@ -588,8 +589,9 @@ export default function OnboardPage() {
                 businessType: plan.businessCategory,
                 description: plan.description,
                 themePreset: plan.themeSettings.preset,
-                categories: [plan.businessCategory],
-                productsOption: 'csv'
+                categories: [plan.businessCategory, ...(plan.categories || [])],
+                productsOption: 'csv',
+                themeSettings: plan.themeSettings
               })
               setCsvFile({
                 name: 'AI Generated Catalog',

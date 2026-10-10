@@ -55,6 +55,13 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
         </button>
       </div>
 
+      {editedPlan.meta.provider !== 'gemini' && (
+        <div style={{ backgroundColor: '#FFFBEB', color: '#B45309', padding: '12px 36px', fontSize: '13px', fontWeight: 500, borderBottom: '1px solid #FEF3C7', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Layout size={16} /> 
+          AI API key is unconfigured. Generated using StoreCraft deterministic standard template.
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1px', backgroundColor: '#E2E8F0' }}>
         {/* Main Content Area - Preview */}
         <div style={{ backgroundColor: '#FFFFFF', padding: '36px' }}>
@@ -133,7 +140,9 @@ export function PlanPreviewModal({ plan, onConfirm, onCancel }: PlanPreviewModal
               {editedPlan.sampleProductBlueprints.map((prod, idx) => (
                 <div key={idx} style={{ padding: '16px', backgroundColor: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 800, color: '#10B981', backgroundColor: '#ECFDF5', padding: '2px 6px', borderRadius: '4px' }}>AI Generated</span>
+                    <span style={{ fontSize: '10px', fontWeight: 800, color: editedPlan.meta.provider === 'gemini' ? '#10B981' : '#64748B', backgroundColor: editedPlan.meta.provider === 'gemini' ? '#ECFDF5' : '#F1F5F9', padding: '2px 6px', borderRadius: '4px' }}>
+                      {editedPlan.meta.provider === 'gemini' ? 'AI Generated' : 'Template Sample'}
+                    </span>
                     <span style={{ fontSize: '12px', fontWeight: 700, color: '#0F172A' }}>${prod.suggestedPrice}</span>
                   </div>
                   <strong style={{ fontSize: '13px', color: '#0F172A', display: 'block', marginBottom: '4px' }}>{prod.title}</strong>

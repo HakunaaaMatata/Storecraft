@@ -33,24 +33,30 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
       serviceArea: '',
     }
   })
+  const [fallbackOffered, setFallbackOffered] = useState(false)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async (e?: React.FormEvent, forceFallback = false) => {
+    if (e) e.preventDefault()
     setLoading(true)
     setError(null)
+    setFallbackOffered(false)
     
     try {
+      const payload = forceFallback ? { ...formData, allowFallback: true } : formData
       const res = await fetch('/api/ai/generate-store', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       })
       
       const data = await res.json()
       
       if (!res.ok || !data.success) {
+        if (data.code === 'MISSING_API_KEY' || data.code === 'TIMEOUT' || data.code === 'MALFORMED_RESPONSE' || data.code === 'PROVIDER_ERROR') {
+          setFallbackOffered(true)
+        }
         throw new Error(data.error || 'Failed to generate store plan')
       }
       
@@ -61,7 +67,6 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
       setLoading(false)
     }
   }
-
   return (
     <div style={{
       backgroundColor: '#FFFFFF',
@@ -99,11 +104,25 @@ export function AIGeneratorWizard({ onPlanGenerated, onCancel }: AIGeneratorWiza
           fontSize: '12px',
           marginBottom: '24px',
           display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
+          flexDirection: 'column',
+          gap: '12px',
         }}>
-          <AlertCircle size={16} />
-          <span>{error}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+          {fallbackOffered && (
+            <button 
+              type="button" 
+              onClick={() => handleSubmit(undefined, true)}
+              disabled={loading}
+              style={{
+                alignSelf: 'flex-start', padding: '6px 12px', borderRadius: '4px', border: '1px solid #FCA5A5', backgroundColor: '#FEF2F2', color: '#991B1B', fontSize: '11px', fontWeight: 700, cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+              }}
+            >
+              {loading ? 'Generating...' : 'Use Standard Template Instead'}
+            </button>
+          )}
         </div>
       )}
 
