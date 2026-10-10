@@ -49,8 +49,13 @@ export async function POST(request: Request) {
 
     // Create session and set cookie
     const session = await createSessionForUser(newUser.id)
-    const cookieStore = await cookies()
-    cookieStore.set(SESSION_COOKIE_NAME, session.token, {
+    const response = NextResponse.json({
+      success: true,
+      user: sanitizeUser(newUser),
+      message: 'Account successfully registered.',
+    }, { status: 201 })
+
+    response.cookies.set(SESSION_COOKIE_NAME, session.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -58,11 +63,7 @@ export async function POST(request: Request) {
       maxAge: 7 * 24 * 60 * 60,
     })
 
-    return NextResponse.json({
-      success: true,
-      user: sanitizeUser(newUser),
-      message: 'Account successfully registered.',
-    }, { status: 201 })
+    return response
   } catch (error) {
     console.error('[API] Register error:', error)
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })

@@ -40,8 +40,18 @@ export async function POST(request: Request) {
 
     // Create session & set cookie
     const session = await createSessionForUser(user.id)
-    const cookieStore = await cookies()
-    cookieStore.set(SESSION_COOKIE_NAME, session.token, {
+    const userStores = await getStoresByOwner(user.id)
+    const primaryStore = userStores[0]
+
+    const response = NextResponse.json({
+      success: true,
+      user: sanitizeUser(user),
+      hasStore: userStores.length > 0,
+      storeSlug: primaryStore ? primaryStore.slug : undefined,
+      message: 'Logged in successfully.',
+    })
+
+    response.cookies.set(SESSION_COOKIE_NAME, session.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -49,18 +59,9 @@ export async function POST(request: Request) {
       maxAge: 7 * 24 * 60 * 60,
     })
 
-    const userStores = await getStoresByOwner(user.id)
-    const primaryStore = userStores[0]
-
-    return NextResponse.json({
-      success: true,
-      user: sanitizeUser(user),
-      hasStore: userStores.length > 0,
-      storeSlug: primaryStore ? primaryStore.slug : undefined,
-      message: 'Logged in successfully.',
-    })
-  } catch (error) {
+    return response
+  } catch (error: any) {
     console.error('[API] Login error:', error)
-    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message || String(error), stack: error.stack }, { status: 500 })
   }
 }
