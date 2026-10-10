@@ -34,6 +34,16 @@ export function useStorecraft(storeSlugOrId?: string) {
     setIsClient(true)
     refresh()
 
+    fetch('/api/auth/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.authenticated && data.stores && data.stores.length > 0) {
+          localStorage.setItem('storecraft_stores_v1', JSON.stringify(data.stores))
+          refresh()
+        }
+      })
+      .catch(() => {})
+
     const handleUpdate = () => refresh()
     window.addEventListener('storecraft_db_update', handleUpdate)
     window.addEventListener('storage', handleUpdate)
