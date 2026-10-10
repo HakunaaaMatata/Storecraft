@@ -82,8 +82,51 @@ export function DashboardShell({ children }: DashboardShellProps) {
 
   if (!isClient || authLoading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEF3F1' }}>
-        <p style={{ color: 'var(--slate)', fontSize: '14px', fontWeight: 600 }}>Loading StoreCraft Dashboard...</p>
+      <div style={{ minHeight: '100vh', backgroundColor: '#EEF3F1', display: 'flex', flexDirection: 'column' }}>
+        {/* Skeleton Header */}
+        <header style={{ height: '64px', backgroundColor: '#FFFFFF', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', zIndex: 40 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div style={{ width: '120px', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <div style={{ width: '60px', height: '16px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '60px', height: '16px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '80px', height: '32px', backgroundColor: '#E2E8F0', borderRadius: '16px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+        </header>
+        
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          {/* Skeleton Sidebar */}
+          <div style={{ width: '250px', backgroundColor: '#FFFFFF', borderRight: '1px solid var(--line)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ width: '100%', height: '48px', backgroundColor: '#E2E8F0', borderRadius: '8px', marginBottom: '16px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '100%', height: '20px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '80%', height: '20px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '90%', height: '20px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+
+          {/* Skeleton Main Content */}
+          <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto' }}>
+            <div style={{ width: '30%', height: '28px', backgroundColor: '#E2E8F0', borderRadius: '4px', marginBottom: '24px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            <div style={{ width: '100%', height: '120px', backgroundColor: '#E2E8F0', borderRadius: '8px', marginBottom: '32px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} style={{ height: '100px', backgroundColor: '#FFFFFF', border: '1px solid var(--line)', borderRadius: '8px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ width: '40%', height: '14px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                  <div style={{ width: '60%', height: '24px', backgroundColor: '#E2E8F0', borderRadius: '4px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ width: '100%', height: '400px', backgroundColor: '#FFFFFF', border: '1px solid var(--line)', borderRadius: '8px', animation: 'pulse 1.5s infinite ease-in-out' }} />
+          </div>
+        </div>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+          }
+        `}</style>
       </div>
     )
   }
