@@ -66,7 +66,7 @@ export function useStorecraft(storeSlugOrId?: string) {
               })),
               subtotal: o.subtotal,
               tax: o.tax,
-              shipping: o.shipping,
+              shipping: o.shipping, total: o.total, status: o.status,
               total: o.total,
               status: o.status,
               paymentStatus: o.paymentMethod || 'Paid',
