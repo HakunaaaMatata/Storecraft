@@ -30,24 +30,25 @@ export function useStorecraft(storeSlugOrId?: string) {
     }
   }, [storeSlugOrId])
 
-  const syncServer = useCallback((storeToSync = activeStore) => {
-    if (!storeToSync || typeof window === 'undefined') return
+  const syncServer = useCallback((storeToSync?: Store) => {
+    const targetStore = storeToSync || db.getActiveStore()
+    if (!targetStore || typeof window === 'undefined') return
     try {
-      const allProducts = db.getProducts(storeToSync.id)
+      const allProducts = db.getProducts(targetStore.id)
       fetch('/api/sync-onboard', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ store: storeToSync, products: allProducts }),
+        body: JSON.stringify({ store: targetStore, products: allProducts }),
       }).catch((err) => console.warn('Background store sync warning:', err))
 
       // Also sync orders down from the server
-      fetch(`/api/store/${storeToSync.slug}/orders`)
+      fetch(`/api/store/${targetStore.slug}/orders`)
         .then(r => r.json())
         .then(data => {
           if (data.success && data.orders) {
             const mappedOrders = data.orders.map((o: any) => ({
               id: o.id,
-              storeId: storeToSync.id,
+              storeId: targetStore.id,
               orderNumber: o.id.startsWith('SC-') ? `#${o.id.substring(3)}` : `#${o.id}`,
               customer: {
                 name: o.customer?.fullName || o.customer?.name || 'Unknown',
@@ -73,16 +74,16 @@ export function useStorecraft(storeSlugOrId?: string) {
               createdAt: o.createdAt
             }))
             
-            const currentOrders = db.getOrders(storeToSync.id)
+            const currentOrders = db.getOrders(targetStore.id)
             if (JSON.stringify(currentOrders) !== JSON.stringify(mappedOrders)) {
-              db.setStoreOrders(storeToSync.id, mappedOrders)
+              db.setStoreOrders(targetStore.id, mappedOrders)
             }
           }
         }).catch(err => console.warn('Background orders sync warning:', err))
     } catch (e) {
       // Non-blocking sync
     }
-  }, [activeStore])
+  }, [])
 
   useEffect(() => {
     setIsClient(true)
