@@ -494,7 +494,7 @@ export default function OnboardPage() {
       {/* Wizard Header */}
       <header className="site-header">
         <Link href="/" className="brand">
-          <div className="brand-mark"><span /></div>
+          <img src="/images/storecraft-logo.png" alt="StoreCraft logo" className="brand-mark" style={{ objectFit: 'contain' }} />
           <span className="brand-name">StoreCraft</span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px' }}>
@@ -1722,7 +1722,7 @@ export default function OnboardPage() {
             borderTop: '1px solid #E2E8F0',
           }}>
             <div>
-              {step > 1 && (
+              {step > 1 ? (
                 <button
                   type="button"
                   onClick={handlePrev}
@@ -1730,6 +1730,15 @@ export default function OnboardPage() {
                   style={{ border: '1px solid #CBD5E1', fontSize: '12px' }}
                 >
                   <ArrowLeft size={14} /> Back
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSetupMethod(null)}
+                  className="button button-light"
+                  style={{ border: '1px solid #CBD5E1', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <ArrowLeft size={14} /> Change Setup Method
                 </button>
               )}
             </div>

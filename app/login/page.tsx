@@ -128,7 +128,7 @@ function LoginForm() {
       {/* Header */}
       <header className="site-header">
         <Link href="/" className="brand">
-          <div className="brand-mark"><span /></div>
+          <img src="/images/storecraft-logo.png" alt="StoreCraft logo" className="brand-mark" style={{ objectFit: 'contain' }} />
           <span className="brand-name">StoreCraft</span>
         </Link>
         <div className="header-actions">

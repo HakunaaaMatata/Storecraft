@@ -178,7 +178,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           <Link href="/" className="brand">
-            <div className="brand-mark"><span /></div>
+            <img src="/images/storecraft-logo.png" alt="StoreCraft logo" className="brand-mark" style={{ objectFit: 'contain' }} />
             <span className="brand-name">StoreCraft</span>
           </Link>
           <span style={{ color: 'var(--line)', fontSize: '18px', display: 'none' }} className="md:inline">/</span>
@@ -254,7 +254,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                   <Link href="/" className="brand">
-                    <div className="brand-mark"><span /></div>
+                    <img src="/images/storecraft-logo.png" alt="StoreCraft logo" className="brand-mark" style={{ objectFit: 'contain' }} />
                     <span className="brand-name">StoreCraft</span>
                   </Link>
                   <button onClick={() => setMobileMenuOpen(false)} style={{ background: 'none', padding: '4px' }}>

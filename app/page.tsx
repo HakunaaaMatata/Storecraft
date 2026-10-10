@@ -75,7 +75,7 @@ const themes = [
 ]
 
 function Brand({ compact = false }: { compact?: boolean }) {
-  return <div className="brand"><div className="brand-mark"><span /></div>{!compact && <span className="brand-name">StoreCraft</span>}</div>
+  return <div className="brand"><img src="/images/storecraft-logo.png" alt="StoreCraft logo" className="brand-mark" style={{ objectFit: 'contain' }} />{!compact && <span className="brand-name">StoreCraft</span>}</div>
 }
 
 function ProductPreview() {
