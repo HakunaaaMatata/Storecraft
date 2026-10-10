@@ -1,6 +1,199 @@
 {
   "stores": [
     {
+      "id": "store-dxtfcgv-mv1muyyg",
+      "slug": "dxtfcgv",
+      "name": "dxtfcgv",
+      "tagline": "Welcome to our store",
+      "announcement": "Welcome to our new store!",
+      "preset": "market",
+      "categories": [
+        "Jewelry and Accessories"
+      ],
+      "heroHeadline": "Good food from",
+      "heroHeadlineEm": "",
+      "heroSubtitle": "Seasonal harvest, small-batch pantry staples, and kitchen provisions direct from family farms.",
+      "heroImage": "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1600&q=85",
+      "products": [
+        {
+          "id": "prod-sample-jewelry---accessories-7-0",
+          "sku": "JA-BAG-08",
+          "title": "Canvas Weekend Duffel",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 130,
+          "inventory": 18,
+          "lowStockThreshold": 5,
+          "description": "Durable heavyweight cotton canvas duffel bag with leather handles and brass hardware.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-6-0",
+          "sku": "JA-SCR-07",
+          "title": "Silk Scarf",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 65,
+          "inventory": 25,
+          "lowStockThreshold": 5,
+          "description": "100% pure mulberry silk scarf featuring a hand-painted geometric print.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1584916201218-f4242ceb4809?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-5-0",
+          "sku": "JA-RNG-06",
+          "title": "Signet Ring",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 75,
+          "inventory": 12,
+          "lowStockThreshold": 5,
+          "description": "Classic oval signet ring crafted from sterling silver, ready for custom engraving.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1605100804763-247f673f224e?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-4-0",
+          "sku": "JA-BRC-05",
+          "title": "Woven Leather Bracelet",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 45,
+          "inventory": 30,
+          "lowStockThreshold": 5,
+          "description": "Hand-braided leather bracelet with a magnetic stainless steel clasp.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-3-0",
+          "sku": "JA-EAR-04",
+          "title": "Pearl Drop Earrings",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 95,
+          "inventory": 20,
+          "lowStockThreshold": 5,
+          "description": "Lustrous freshwater cultured pearls suspended from solid 14k gold huggie hoops.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-2-0",
+          "sku": "JA-WTC-03",
+          "title": "Minimalist Automatic Watch",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 350,
+          "inventory": 5,
+          "lowStockThreshold": 5,
+          "description": "Sleek 38mm stainless steel watch with a sapphire crystal face and reliable Japanese automatic movement.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1524805444758-089113d48a6d?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-1-0",
+          "sku": "JA-SUN-02",
+          "title": "Classic Aviator Sunglasses",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 145,
+          "inventory": 15,
+          "lowStockThreshold": 5,
+          "description": "Polarized lenses with a lightweight titanium frame and spring hinges for maximum comfort.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1511499767150-a48a237f0083?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "prod-sample-jewelry---accessories-0-0",
+          "sku": "JA-NCK-01",
+          "title": "14k Gold Vermeil Herringbone Necklace",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 120,
+          "inventory": 10,
+          "lowStockThreshold": 5,
+          "description": "Silky fluid 4mm flat herringbone chain crafted in 14k gold over recycled 925 sterling silver.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "dxtfcgv-p3",
+          "sku": "SKU-DXT-103",
+          "title": "Heavy Woven Linen Throw",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 120,
+          "inventory": 8,
+          "lowStockThreshold": 5,
+          "description": "Textured soft linen blanket that grows softer with every wash.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "dxtfcgv-p2",
+          "sku": "SKU-DXT-102",
+          "title": "Hand-thrown Ceramic Mug",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 34,
+          "inventory": 4,
+          "lowStockThreshold": 5,
+          "description": "Studio handcrafted stoneware mug made in small kiln batches.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        },
+        {
+          "id": "dxtfcgv-p1",
+          "sku": "SKU-DXT-101",
+          "title": "Forma Desk Lamp",
+          "subtitle": "Jewelry and Accessories",
+          "category": "Jewelry and Accessories",
+          "price": 148,
+          "inventory": 14,
+          "lowStockThreshold": 5,
+          "description": "Cast aluminum task light with balanced counterweight pivot and touch dimming.",
+          "features": [],
+          "images": [
+            "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&q=80"
+          ],
+          "variants": {}
+        }
+      ]
+    },
+    {
       "id": "store-jewellery-store-3-mv1szywj",
       "slug": "jewellery-store-3",
       "name": "Jewellery Store",
