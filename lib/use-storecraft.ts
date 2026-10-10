@@ -175,6 +175,55 @@ export function useStorecraft(storeSlugOrId?: string) {
   const lowStockThreshold = 5
   const lowStockCount = products.filter((p) => p.stock <= lowStockThreshold).length
 
+  // Poll for orders every 10 seconds
+  useEffect(() => {
+    if (!activeStore || !isClient) return;
+    
+    const pollInterval = setInterval(() => {
+      fetch(`/api/store/${activeStore.slug}/orders`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success && data.orders) {
+            const mappedOrders = data.orders.map((o: any) => ({
+              id: o.id,
+              storeId: activeStore.id,
+              orderNumber: o.id.startsWith('SC-') ? `#${o.id.substring(3)}` : `#${o.id}`,
+              customer: {
+                name: o.customer?.fullName || o.customer?.name || 'Unknown',
+                email: o.customer?.email || '',
+                phone: o.customer?.phone || '',
+                address: o.customer?.address || ''
+              },
+              items: o.items.map((i: any) => ({
+                productId: i.productId,
+                name: i.title || i.name || 'Item',
+                price: i.unitPrice || i.price || 0,
+                quantity: i.quantity,
+                selectedVariant: Object.values(i.selectedVariants || {}).filter(Boolean).join(', ') || undefined,
+                image: i.image
+              })),
+              subtotal: o.subtotal,
+              tax: o.tax,
+              shipping: o.shipping,
+              total: o.total,
+              status: o.status,
+              paymentStatus: o.paymentMethod || 'Paid',
+              statusHistory: o.statusHistory || [{ status: o.status, timestamp: o.createdAt }],
+              createdAt: o.createdAt
+            }));
+            
+            const currentOrders = db.getOrders(activeStore.id);
+            if (JSON.stringify(currentOrders) !== JSON.stringify(mappedOrders)) {
+              db.setStoreOrders(activeStore.id, mappedOrders);
+            }
+          }
+        })
+        .catch(console.warn);
+    }, 10000);
+    
+    return () => clearInterval(pollInterval);
+  }, [activeStore, isClient]);
+
   return {
     isClient,
     stores,
