@@ -172,7 +172,7 @@ function WorkspaceView() {
 }
 
 export default function Page() {
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isLoading } = useAuth()
   const [themeIndex, setThemeIndex] = useState(0)
   const [menuOpen, setMenuOpen] = useState(false)
   const { scrollYProgress } = useScroll()
