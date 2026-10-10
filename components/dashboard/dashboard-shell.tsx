@@ -211,7 +211,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
         <div className="header-actions">
           {activeStore && (
             <Link 
-              href={`/store/${activeStore.slug}`} 
+              href={`https://${activeStore.slug}.stores.prosess.in`} 
               target="_blank"
               className="button button-green" 
               style={{ padding: '8px 14px', fontSize: '11px' }}
@@ -635,12 +635,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', boxShadow: '0 0 0 3px #D1FAE5' }} />
                   <span>
-                    Store is live: <strong>{activeStore.slug}.storecraft.app</strong>
+                    Store is live: <strong>{activeStore.slug}.stores.prosess.in</strong>
                   </span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Link 
-                    href={`/store/${activeStore.slug}`} 
+                    href={`https://${activeStore.slug}.stores.prosess.in`} 
                     target="_blank" 
                     style={{ fontSize: '11px', fontWeight: 800, color: '#087D58', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                   >
